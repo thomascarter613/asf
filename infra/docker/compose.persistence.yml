@@ -1,0 +1,64 @@
+name: asf-persistence
+
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:17-alpine}
+    container_name: asf-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-asf}
+      POSTGRES_USER: ${POSTGRES_USER:-asf}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-asf_local_password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - asf-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-asf} -d ${POSTGRES_DB:-asf}"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  mongodb:
+    image: ${MONGODB_IMAGE:-mongodb/mongodb-community-server:8.0.21-ubi9-slim}
+    container_name: asf-mongodb
+    restart: unless-stopped
+    environment:
+      MONGODB_INITDB_ROOT_USERNAME: ${MONGODB_ROOT_USERNAME:-asf}
+      MONGODB_INITDB_ROOT_PASSWORD: ${MONGODB_ROOT_PASSWORD:-asf_local_password}
+    ports:
+      - "${MONGODB_PORT:-27017}:27017"
+    volumes:
+      - asf-mongodb-data:/data/db
+      - asf-mongodb-config:/data/configdb
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mongosh --quiet --eval \"db.adminCommand('ping').ok\""
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  qdrant:
+    image: ${QDRANT_IMAGE:-qdrant/qdrant:v1.17.1}
+    container_name: asf-qdrant
+    restart: unless-stopped
+    ports:
+      - "${QDRANT_HTTP_PORT:-6333}:6333"
+      - "${QDRANT_GRPC_PORT:-6334}:6334"
+    volumes:
+      - asf-qdrant-data:/qdrant/storage
+
+volumes:
+  asf-postgres-data:
+  asf-mongodb-data:
+  asf-mongodb-config:
+  asf-qdrant-data:

@@ -1,4 +1,5 @@
 # Operating system noise
+.env
 .DS_Store
 Thumbs.db
 

@@ -14,7 +14,7 @@ domain:
   - "charon"
   - "foundry-control-plane"
 related_adrs:
-  - "docs/adr/ADR-0006-polyglot-persistence-and-qdrant-retrieval.md"
+  - "docs/adr/ADR-0007-polyglot-persistence-and-qdrant-retrieval.md"
 canonical: true
 implementation_status: "not-started"
 ---
@@ -23,30 +23,35 @@ implementation_status: "not-started"
 
 ## 1. Purpose
 
-This specification defines the canonical persistence and retrieval architecture for the Agentic Software Foundry.
+This specification defines the persistence and retrieval architecture for the Agentic Software Foundry.
 
-The system shall use a polyglot persistence model in which each storage engine has a clear, bounded responsibility. The purpose of this architecture is to avoid collapsing all system state into a single database while also preventing architectural drift, duplicated authority, or ambiguous sources of truth.
+The system shall use a polyglot persistence model in which each storage engine has a bounded responsibility. The purpose of this model is to preserve explicit ownership of truth while allowing each storage technology to be used where it is strongest.
 
-The governing principle is:
+The governing rule is:
 
-> Git and canonical operational databases are sources of truth.  
-> Specialized retrieval indexes are derived, rebuildable, and non-canonical.
+```text
+Canonical stores own truth.
 
-This specification applies to the broader Agentic Software Foundry, including Charon — Context Bridge, Mnemosyne — Canonical Memory Repository, Argos — Semantic Retrieval Index, Anamnesis — Rehydration Engine, the Foundry Control Plane, and all future services that ingest, store, index, retrieve, assemble, or reason over project context.
+Derived indexes support access, retrieval, and search.
+
+Derived indexes must be rebuildable.
+````
+
+This specification applies to the Foundry Control Plane, Charon — Context Bridge, Mnemosyne — Canonical Memory Repository, Argos — Semantic Retrieval Index, Anamnesis — Rehydration Engine, and future services that ingest, store, index, retrieve, assemble, or govern project context.
 
 ## 2. Normative Language
 
-The terms **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT**, and **MAY** are used in their ordinary specification sense.
+The terms MUST, MUST NOT, SHOULD, SHOULD NOT, and MAY are used in their ordinary specification sense.
 
-A requirement marked **MUST** is mandatory.
+A MUST requirement is mandatory.
 
-A requirement marked **SHOULD** is strongly recommended and may be departed from only with an explicit ADR or implementation note.
+A SHOULD requirement is strongly recommended and may be departed from only with an explicit implementation note or ADR.
 
-A requirement marked **MAY** is optional.
+A MAY requirement is optional.
 
-## 3. Architectural Summary
+## 3. Approved Storage Model
 
-The system shall use the following storage roles:
+The approved persistence model is:
 
 ```text
 Git
@@ -54,7 +59,7 @@ Git
   policies, prompts, docs, and version-controlled project memory.
 
 PostgreSQL
-  Canonical relational, transactional, governance, workflow, authorization,
+  Canonical relational, transactional, workflow, authorization, governance,
   audit, and operational state.
 
 MongoDB
@@ -69,63 +74,61 @@ Object Storage
   Raw blobs, uploaded files, generated artifacts, large exports, snapshots,
   PDFs, DOCX files, archives, and binary assets.
 
-Optional Lexical Search Engine
+Optional Lexical Search
   Keyword-first search, faceting, typo tolerance, and user-facing document
   discovery where Qdrant hybrid retrieval is insufficient.
-````
-
-The approved default stack is:
-
-```text
-PostgreSQL + MongoDB + Qdrant + object storage
 ```
 
-The preferred local object storage implementation is MinIO.
-
-The preferred production object storage implementation is S3-compatible storage, with Cloudflare R2 as the default candidate unless superseded by a later infrastructure decision.
-
-## 4. Core Architectural Invariant
-
-The system MUST preserve the following invariant:
+The default local stack SHOULD be:
 
 ```text
-Canonical state lives in Git, PostgreSQL, MongoDB, and object storage.
-
-Qdrant stores derived retrieval indexes only.
-
-Every Qdrant point MUST resolve back to canonical source records.
+PostgreSQL
+MongoDB
+Qdrant
+MinIO
 ```
 
-Qdrant MUST NOT become the sole source of truth for any document, chunk, policy, memory packet, work packet, audit event, or project artifact.
+The default production object storage candidate SHOULD be S3-compatible storage, with Cloudflare R2 as the preferred candidate unless superseded by a later infrastructure ADR.
 
-The system MUST be able to rebuild Qdrant from canonical sources.
+## 4. Core Invariant
+
+The system MUST preserve this invariant:
+
+```text
+Git, PostgreSQL, MongoDB, and object storage may contain canonical truth.
+
+Qdrant is a derived retrieval index.
+
+Every Qdrant point must resolve back to canonical truth.
+
+Qdrant must be rebuildable from canonical sources.
+```
+
+Qdrant MUST NOT become the only store for source text, documents, chunks, policies, work packets, audit records, memory packets, permissions, or project state.
 
 ## 5. Storage Authority Matrix
 
-| Storage System              |                 Canonical? | Primary Responsibility                                                      | Rebuildable? | Notes                                            |
-| --------------------------- | -------------------------: | --------------------------------------------------------------------------- | -----------: | ------------------------------------------------ |
-| Git                         |                        Yes | Human-authored source artifacts, docs, specs, ADRs, policies, prompts, code |           No | Historical source of reviewable truth            |
-| PostgreSQL                  |                        Yes | Relational and transactional operational state                              |           No | Strong constraints, state machines, auditability |
-| MongoDB                     |                        Yes | Document-shaped context and semi-structured operational memory              |           No | Flexible schemas and context documents           |
-| Qdrant                      |                         No | Semantic retrieval index                                                    |          Yes | Must be rebuildable from canonical stores        |
-| Object Storage              |                        Yes | Raw files, uploads, generated artifacts, large blobs                        |           No | Referenced by metadata records                   |
-| Meilisearch/OpenSearch/etc. | No, unless later specified | Lexical/user-facing search index                                            |          Yes | Optional derived index                           |
+| Store          | Canonical? | Primary Responsibility                                                          | Rebuildable? |
+| -------------- | ---------: | ------------------------------------------------------------------------------- | -----------: |
+| Git            |        Yes | Human-authored artifacts, source files, docs, ADRs, specs, policies, prompts    |           No |
+| PostgreSQL     |        Yes | Relational, transactional, workflow, authorization, audit, and governance state |           No |
+| MongoDB        |        Yes | Document-shaped context, chunk trees, source maps, memory packets, manifests    |           No |
+| Qdrant         |         No | Semantic vector retrieval index                                                 |          Yes |
+| Object Storage |        Yes | Raw files, uploads, generated artifacts, large blobs, snapshots                 |           No |
+| Lexical Search | Usually no | Keyword search, faceting, user-facing discovery                                 |          Yes |
 
 ## 6. Git Responsibilities
 
-Git is the canonical home for human-authored, reviewable, version-controlled project artifacts.
-
-Git MUST own:
+Git MUST own human-authored, reviewable, version-controlled artifacts, including:
 
 ```text
 source code
 Markdown documentation
 architecture specifications
 ADRs
-governance documents
 policy documents
 prompt documents
-agent context bootstrap documents
+agent bootstrap documents
 handoff packets committed as files
 configuration templates
 schemas where source-controlled
@@ -133,61 +136,59 @@ migration files
 test fixtures where source-controlled
 ```
 
-Git SHOULD remain the highest-trust source for documents that require human review, diffing, branching, pull requests, commit signatures, code review, and historical traceability.
+Git SHOULD remain the highest-trust source for artifacts that require review, diffing, branching, pull requests, commit signatures, and historical traceability.
 
-Git MUST NOT be treated as the only runtime state store. Operational state belongs in canonical databases.
+Git MUST NOT be treated as the only runtime state store.
 
 ## 7. PostgreSQL Responsibilities
 
-PostgreSQL is the canonical store for relational, transactional, and governance-grade operational state.
+PostgreSQL MUST own relational, transactional, authorization, workflow, audit, and governance-grade operational state.
 
-PostgreSQL MUST own state where correctness depends on:
+PostgreSQL SHOULD own:
 
 ```text
-identity
-authorization
-roles
-permissions
+users
+accounts
 organizations
 projects
 repositories
 work packets
 jobs
 runs
-state transitions
-approvals
-task queues where durable state is required
+tasks
+agents
+tools
+roles
+permissions
 policy assignments
+approval state
+state transitions
 audit events
-governance records
 integration records
 deployment records
 billing records, if later introduced
 ```
 
-PostgreSQL SHOULD be used where the system needs:
+PostgreSQL SHOULD be used where correctness depends on:
 
 ```text
 foreign keys
 unique constraints
-transactional integrity
-relational joins
+transactions
+joins
 strict state machines
-strong auditability
-append-only event records
-structured reporting
+append-only audit records
 authorization boundaries
+structured reporting
 ```
 
 PostgreSQL MAY use JSONB for flexible attributes attached to otherwise relational records.
 
-PostgreSQL SHOULD NOT be used as the primary store for large, deeply nested, frequently evolving, polymorphic context documents when those documents are more naturally represented as whole document objects.
+PostgreSQL SHOULD NOT be used as the primary store for large, deeply nested, polymorphic, frequently evolving context documents when those records are naturally document-shaped.
 
 ## 8. MongoDB Responsibilities
 
-MongoDB is the canonical store for document-shaped, semi-structured, context-oriented operational records.
-
-MongoDB MUST own records where the primary shape is naturally document-like, nested, polymorphic, schema-evolving, or best read and written as a whole object.
+MongoDB MUST own document-shaped, semi-structured, context-oriented operational records.
 
 MongoDB SHOULD own:
 
@@ -206,7 +207,6 @@ LLM trace summaries
 ingestion manifests
 indexing manifests
 heterogeneous metadata records
-intermediate parsing artifacts
 memory packets
 context assembly records
 ```
@@ -215,43 +215,39 @@ MongoDB documents MUST include schema version metadata when their shape is expec
 
 MongoDB documents SHOULD include provenance metadata linking them back to Git, object storage, PostgreSQL records, or external source systems.
 
-MongoDB MUST NOT silently replace Git as the source of truth for human-authored artifacts. When a MongoDB document represents a parsed or projected form of a Git file, it MUST include source provenance.
+MongoDB MUST NOT silently replace Git as the source of truth for human-authored artifacts. When MongoDB stores a parsed or projected form of a Git file, it MUST include source provenance.
 
 ## 9. Qdrant Responsibilities
 
-Qdrant is the specialized semantic retrieval index.
-
-Qdrant MUST own:
+Qdrant MUST own derived retrieval indexes, including:
 
 ```text
 dense vector embeddings
 sparse vector embeddings
-hybrid retrieval indexes
+hybrid retrieval points
 multi-vector retrieval representations
 payload-filtered retrieval points
 semantic search collections
 retrieval experiment collections
 ```
 
-Qdrant MUST be treated as derived infrastructure.
-
-Qdrant MUST NOT own:
+Qdrant MUST NOT own canonical:
 
 ```text
-canonical documents
-canonical chunks
-canonical policies
-canonical work packets
-canonical audit records
-canonical permissions
-canonical project state
-canonical memory packets
-canonical source files
+documents
+chunks
+policies
+work packets
+audit records
+permissions
+project state
+memory packets
+source files
 ```
 
 Every Qdrant point MUST contain enough payload metadata to resolve the point back to canonical truth.
 
-At minimum, each Qdrant point SHOULD include:
+At minimum, each Qdrant payload SHOULD include:
 
 ```json
 {
@@ -280,7 +276,7 @@ The exact payload schema MUST be formalized before the first production retrieva
 
 ## 10. Object Storage Responsibilities
 
-Object storage is the canonical store for large files, generated artifacts, binary assets, uploads, and export bundles.
+Object storage MUST own large files, generated artifacts, binary assets, uploads, and export bundles.
 
 Object storage SHOULD own:
 
@@ -303,15 +299,13 @@ large traces not suitable for PostgreSQL
 
 Metadata for object storage records SHOULD live in PostgreSQL or MongoDB depending on whether the metadata is relational or document-shaped.
 
-Object storage records MUST be referenced by durable identifiers.
-
 Object storage MUST NOT be the only place where provenance is recorded.
 
-## 11. Optional Lexical Search Responsibilities
+## 11. Lexical Search Responsibilities
 
 A lexical search engine MAY be introduced when keyword-first search, faceting, typo tolerance, user-facing search UX, or large-scale exact matching becomes important enough to justify dedicated infrastructure.
 
-Candidates include:
+Candidate engines include:
 
 ```text
 Meilisearch
@@ -321,13 +315,9 @@ PostgreSQL full-text search
 MongoDB Search
 ```
 
-A lexical search engine, if introduced, SHOULD be treated as a derived index unless an ADR explicitly grants it canonical authority.
+A lexical search engine SHOULD be treated as a derived index unless an ADR explicitly grants it canonical authority.
 
-For the initial architecture, lexical search is optional.
-
-Qdrant hybrid retrieval MAY be sufficient for early semantic and exact retrieval needs.
-
-## 12. Canonical Identity and Cross-Store References
+## 12. Cross-Store Identity
 
 The system MUST use stable identifiers for cross-store references.
 
@@ -335,9 +325,9 @@ Identifiers SHOULD be globally unique, URL-safe, sortable where useful, and suit
 
 ULID-style identifiers are preferred unless superseded by a later identifier specification.
 
-A record that crosses storage boundaries MUST preserve resolvability.
+The system MUST NOT rely on implicit naming conventions alone for cross-store joins.
 
-For example:
+Example:
 
 ```text
 PostgreSQL project
@@ -354,13 +344,9 @@ Qdrant point
   source_path: docs/architecture/retrieval.md
 ```
 
-The system MUST NOT rely on implicit naming conventions alone for cross-store joins.
-
 ## 13. Ingestion Pipeline
 
-The ingestion pipeline is responsible for converting canonical artifacts into canonical operational records and derived retrieval indexes.
-
-The pipeline SHOULD follow this flow:
+The ingestion pipeline SHOULD follow this flow:
 
 ```text
 1. Discover source artifact.
@@ -379,43 +365,9 @@ The pipeline SHOULD follow this flow:
 
 The ingestion pipeline MUST be idempotent.
 
-Repeated ingestion of the same source at the same version SHOULD NOT create duplicate canonical records or duplicate active Qdrant points.
+Repeated ingestion of the same source version SHOULD NOT create duplicate canonical records or duplicate active Qdrant points.
 
-## 14. Indexing Lifecycle
-
-Document and chunk indexing SHOULD model explicit lifecycle states.
-
-Recommended states:
-
-```text
-discovered
-parsed
-validated
-stored
-chunked
-embedded
-indexed
-failed
-superseded
-deleted
-```
-
-Failures MUST be explicit.
-
-Failures SHOULD include:
-
-```text
-source identifier
-stage
-error code
-human-readable message
-retryability
-timestamp
-run identifier
-correlation identifier
-```
-
-## 15. Supersession and Versioning
+## 14. Supersession and Versioning
 
 The system MUST support supersession.
 
@@ -431,13 +383,13 @@ superseded
 
 Superseded chunks MUST NOT be returned by default retrieval queries.
 
-Retrieval queries MAY include superseded chunks only when explicitly requested for historical, audit, debugging, or comparison purposes.
+Retrieval MAY include superseded chunks only when explicitly requested for historical, audit, debugging, or comparison purposes.
 
 Qdrant payloads MUST include a `superseded` field or equivalent retrieval filter.
 
 Canonical stores MUST retain enough information to explain why a chunk was superseded.
 
-## 16. Retrieval Contract
+## 15. Retrieval Contract
 
 Retrieval MUST be policy-aware.
 
@@ -446,7 +398,7 @@ A retrieval request SHOULD include:
 ```text
 tenant scope
 project scope
-repository scope, where applicable
+repository scope
 user or agent identity
 classification boundary
 source type constraints
@@ -483,7 +435,7 @@ A retrieval result SHOULD include:
 }
 ```
 
-## 17. Context Assembly
+## 16. Context Assembly
 
 Anamnesis — Rehydration Engine shall assemble context from retrieval results.
 
@@ -501,14 +453,14 @@ respect token budgets
 preserve document hierarchy
 prefer higher-trust sources
 record why content was included
-record what was excluded when materially relevant
+record materially relevant exclusions
 ```
 
 Context packs SHOULD be stored in MongoDB when they are document-shaped operational records.
 
 Context pack metadata MAY also be recorded in PostgreSQL when needed for workflow state, audit state, or authorization.
 
-## 18. Auditability
+## 17. Auditability
 
 The system MUST preserve enough information to answer:
 
@@ -530,7 +482,7 @@ MongoDB SHOULD store document-shaped trace records when trace detail is too nest
 
 Qdrant MUST NOT be the only place where retrieval events are recorded.
 
-## 19. Security and Access Control
+## 18. Security and Access Control
 
 The system MUST enforce access control before context reaches an agent, model, user, or tool.
 
@@ -554,7 +506,7 @@ Qdrant payload filters MAY participate in access filtering, but Qdrant MUST NOT 
 
 The retrieval service MUST enforce policy at the application layer.
 
-## 20. Multi-Tenancy
+## 19. Multi-Tenancy
 
 The system SHOULD assume future multi-tenancy.
 
@@ -573,17 +525,15 @@ collection per project
 hybrid model with large tenants isolated
 ```
 
-The initial default SHOULD be a single collection per major corpus with strict tenant/project payload filters, unless performance or isolation requirements justify stronger separation.
+The initial default SHOULD be a single collection per major corpus with strict tenant/project payload filters unless performance or isolation requirements justify stronger separation.
 
-## 21. Backup, Restore, and Rebuild
+## 20. Backup, Restore, and Rebuild
 
 Canonical stores MUST be backed up.
 
 Qdrant SHOULD be snapshotted for operational convenience, but Qdrant snapshots MUST NOT replace canonical backups.
 
 The system MUST retain the ability to rebuild Qdrant from canonical sources.
-
-The rebuild process SHOULD be documented and tested.
 
 The rebuild process SHOULD support:
 
@@ -597,7 +547,7 @@ embedding-model migration
 schema-version migration
 ```
 
-## 22. Local Development Topology
+## 21. Local Development Topology
 
 The local development environment SHOULD include:
 
@@ -613,11 +563,9 @@ indexing worker
 
 Local development MUST be reproducible.
 
-Local service configuration SHOULD live under the repository’s canonical infrastructure structure.
-
 Secrets MUST NOT be committed.
 
-Example future locations:
+Recommended future locations:
 
 ```text
 infra/docker/postgres/
@@ -630,15 +578,15 @@ packages/retrieval-contracts/
 packages/context-schemas/
 ```
 
-## 23. Non-Goals
+## 22. Non-Goals
 
-This specification does not require the system to implement all databases immediately.
+This specification does not require every database to be fully implemented immediately.
 
 This specification does not require Qdrant to be exposed directly to application clients.
 
-This specification does not require MongoDB Vector Search to be used.
+This specification does not require MongoDB Vector Search.
 
-This specification does not require PostgreSQL `pgvector` to be used.
+This specification does not require PostgreSQL pgvector.
 
 This specification does not require OpenSearch, Elasticsearch, Meilisearch, Neo4j, Redis, Kafka, or ClickHouse in the initial implementation.
 
@@ -646,14 +594,12 @@ This specification does not define the final embedding model.
 
 This specification does not define the final chunking algorithm.
 
-Those decisions require separate implementation specifications or ADRs.
-
-## 24. Initial Implementation Sequence
+## 23. Initial Implementation Sequence
 
 The recommended implementation sequence is:
 
 ```text
-1. Add architecture specification and ADR.
+1. Add this specification and ADR-0007.
 2. Add local Docker Compose services for PostgreSQL, MongoDB, Qdrant, and MinIO.
 3. Add health checks for all local services.
 4. Add connection configuration and typed environment validation.
@@ -663,13 +609,13 @@ The recommended implementation sequence is:
 8. Store indexing run metadata in PostgreSQL.
 9. Generate embeddings through a provider boundary.
 10. Upsert points into Qdrant.
-11. Add retrieval smoke test proving Qdrant point → MongoDB record → Git source resolution.
+11. Add retrieval smoke test proving Qdrant point to MongoDB record to Git source resolution.
 12. Add rebuild command for the retrieval index.
 ```
 
-## 25. Acceptance Criteria
+## 24. Acceptance Criteria
 
-This architecture is considered correctly implemented when the system can demonstrate:
+This architecture is correctly implemented when the system can demonstrate:
 
 ```text
 PostgreSQL stores relational operational state.
@@ -683,7 +629,7 @@ A local developer can run the full persistence stack.
 The system has at least one end-to-end retrieval smoke test.
 ```
 
-## 26. Architectural Guardrails
+## 25. Guardrails
 
 The following are prohibited unless superseded by a later ADR:
 
@@ -699,7 +645,7 @@ Allowing superseded chunks into default retrieval.
 Treating vector search results as inherently trustworthy.
 ```
 
-## 27. Final Decision Rule
+## 26. Placement Rule
 
 When deciding where data belongs, use this rule:
 

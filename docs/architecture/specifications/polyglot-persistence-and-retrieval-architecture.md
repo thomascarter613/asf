@@ -1,4 +1,3 @@
-docs/architecture/specifications/polyglot-persistence-and-retrieval-architecture.md
 ---
 title: "Polyglot Persistence and Retrieval Architecture Specification"
 document_id: "asf-spec-polyglot-persistence-and-retrieval-architecture"

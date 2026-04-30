@@ -12,7 +12,6 @@
   "scripts": {
     "verify": "bun run verify:repo && bun run verify:docs",
     "verify:repo": "git diff --check",
-    "verify:docs": "find docs -type f -name '*.md' -print | sort | xargs -r grep -L '^---$' >/tmp/asf-docs-missing-frontmatter.txt && test ! -s /tmp/asf-docs-missing-frontmatter.txt"
-
+    "verify:docs": "find docs -type f -name '*.md' -print | sort | while read -r file; do head -n 1 \"$file\" | grep -qx -- '---' || echo \"$file\"; done > /tmp/asf-docs-missing-frontmatter.txt; test ! -s /tmp/asf-docs-missing-frontmatter.txt"
   }
 }

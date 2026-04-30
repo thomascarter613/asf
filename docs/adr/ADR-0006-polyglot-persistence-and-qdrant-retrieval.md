@@ -1,4 +1,3 @@
-docs/adr/ADR-0006-polyglot-persistence-and-qdrant-retrieval.md
 ---
 title: "ADR-0006: Adopt Polyglot Persistence with Qdrant as the Specialized Vector Retrieval Index"
 document_id: "asf-adr-0006-polyglot-persistence-and-qdrant-retrieval"

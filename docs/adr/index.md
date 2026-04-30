@@ -1,7 +1,24 @@
+---
+title: "ADR Title Catalogue — Full system"
+document_id: "docs-adr-index"
+version: "1.0.0"
+status: "accepted"
+date_created: "2026-04-30"
+date_updated: "2026-04-30"
+project: "Agentic Software Foundry"
+domain:
+  - "architecture"
+  - "data"
+  - "retrieval"
+  - "charon"
+  - "foundry-control-plane"
+supersedes: []
+superseded_by: null
+canonical: true
+---
+
 # ADR Title Catalogue — Full Anthropic System
 ### Principal-Level Estimate — Every Meaningful Decision, Every Domain
-
----
 
 ## 000s — Foundational & Cross-Cutting
 

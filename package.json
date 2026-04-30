@@ -4,14 +4,23 @@
   "type": "module",
   "private": true,
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "^1.3.13"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "typescript": "^6.0.3"
   },
   "scripts": {
-    "verify": "bun run verify:repo && bun run verify:docs",
+    "verify": "bun run verify:repo && bun run verify:docs && bun run typecheck && bun run test",
     "verify:repo": "git diff --check",
-    "verify:docs": "find docs -type f -name '*.md' -print | sort | while read -r file; do head -n 1 \"$file\" | grep -qx -- '---' || echo \"$file\"; done > /tmp/asf-docs-missing-frontmatter.txt; test ! -s /tmp/asf-docs-missing-frontmatter.txt"
+    "verify:docs": "find docs -type f -name '*.md' -print | sort | while read -r file; do head -n 1 \"$file\" | grep -qx -- '---' || echo \"$file\"; done > /tmp/asf-docs-missing-frontmatter.txt; test ! -s /tmp/asf-docs-missing-frontmatter.txt",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "bun test",
+    "start": "bun run index.ts",
+    "persistence:up": "docker compose --env-file .env -f infra/docker/compose.persistence.yml up -d",
+    "persistence:down": "docker compose --env-file .env -f infra/docker/compose.persistence.yml down",
+    "persistence:ps": "docker compose --env-file .env -f infra/docker/compose.persistence.yml ps",
+    "persistence:logs": "docker compose --env-file .env -f infra/docker/compose.persistence.yml logs -f",
+    "persistence:health": "bash -c 'docker compose --env-file .env -f infra/docker/compose.persistence.yml ps && curl -fsS http://localhost:${QDRANT_HTTP_PORT:-6333}/healthz >/dev/null && echo qdrant: ok'",
+    "persistence:reset": "docker compose --env-file .env -f infra/docker/compose.persistence.yml down -v && docker compose --env-file .env -f infra/docker/compose.persistence.yml up -d"
   }
 }

@@ -1,0 +1,18 @@
+{
+  "name": "asf",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "scripts": {
+    "verify": "bun run verify:repo && bun run verify:docs",
+    "verify:repo": "git diff --check",
+    "verify:docs": "find docs -type f -name '*.md' -print | sort | xargs -r grep -L '^---$' >/tmp/asf-docs-missing-frontmatter.txt && test ! -s /tmp/asf-docs-missing-frontmatter.txt"
+
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "schemaVersion": "0.1.0",
+  "description": "Required sections for key Foundry Markdown templates and continuity artifacts.",
+  "documents": [
+    {
+      "path": ".sdlc/work-packets/work-packet-template.md",
+      "requiredSections": [
+        "Metadata",
+        "Objective",
+        "Rationale",
+        "Scope",
+        "Non-Goals",
+        "Required Context",
+        "Files to Create",
+        "Files to Modify",
+        "Files to Avoid",
+        "Implementation Steps",
+        "Acceptance Criteria",
+        "Verification",
+        "Verification Status",
+        "Documentation Updates",
+        "Documentation Status",
+        "Event Emissions",
+        "Policy Gates",
+        "Handoff Requirements",
+        "Handoff Status",
+        "Memory Candidate Expectations",
+        "Memory Candidate Status",
+        "Rollback Plan",
+        "Commit Status",
+        "Recommended Commit",
+        "Lifecycle Log"
+      ]
+    },
+    {
+      "path": ".charon/daedalus/context-packs/context-pack-template.md",
+      "requiredSections": [
+        "Metadata",
+        "Purpose",
+        "Use This Context For",
+        "Do Not Use This Context For",
+        "Critical Context",
+        "Supporting Context",
+        "Canonical Memory Included",
+        "ADRs Included",
+        "Policies Included",
+        "Work Packets Included",
+        "Chronicles or Handoffs Included",
+        "Excluded Material",
+        "Stale, Superseded, or Disputed Context",
+        "Context Budget Notes",
+        "Source Traceability",
+        "Usage Instructions",
+        "Lifecycle Log"
+      ]
+    },
+    {
+      "path": ".charon/daedalus/handoff-packets/handoff-packet-template.md",
+      "requiredSections": [
+        "Metadata",
+        "Project Identity",
+        "Summary",
+        "Completed Work",
+        "Changed Files",
+        "Verification Status",
+        "Documentation Status",
+        "Commit Status",
+        "Active Work Packet",
+        "Open Risks or Blockers",
+        "Memory Candidates Produced",
+        "Context for Next Session",
+        "Next Recommended Action",
+        "New-Session Bootstrap Guidance",
+        "Lifecycle Log"
+      ]
+    },
+    {
+      "path": ".sdlc/verification/verification-record-template.md",
+      "requiredSections": [
+        "Metadata",
+        "Purpose",
+        "Verification Scope",
+        "Commands or Checks",
+        "Summary Result",
+        "Evidence",
+        "Failures",
+        "Skipped or Not-Run Checks",
+        "Follow-Up Required",
+        "Related Artifacts",
+        "Lifecycle Log"
+      ]
+    }
+  ]
+}

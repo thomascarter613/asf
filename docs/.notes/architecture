@@ -1,0 +1,396 @@
+Skip to main content
+Hashnode
+Tech journal
+
+
+Open search (press Control or Command and K)
+
+Toggle theme
+Write
+Command Palette
+Search for a command to run...
+
+I Read All 520K Lines of Claude Code's Leaked Source — Here's the Architecture Behind It
+Anthropic's AI coding assistant got leaked. I reverse-engineered the architecture so you don't have to. Query engines, retry systems, permission layers, and the 15 engineering principles behind the most sophisticated CLI ever built.
+
+Updated
+April 1, 2026
+•
+17 min read
+Ishaan Pandey
+Ishaan Pandey
+On this page
+
+Table of Contents
+The Core Loop — How a Single Message Becomes a Response
+The "Withholding" Pattern
+Max Output Token Escalation
+The Death Spiral Guard
+5 Layers of Context Compression
+The Retry System — 823 Lines of Battle-Tested Recovery
+The Persistent Retry Mode
+The 529 Pre-seeding Trick
+38 Tools — The Full Arsenal
+The Heavy Hitters
+Concurrency Model
+Sibling Error Cascading — Only for Bash
+The Permission System — 6 Layers Deep
+The Auto-Mode ML Classifier
+8 Permission Rule Sources
+14,902 Lines of System Prompt
+The Cache Boundary
+Different Prompts for Different Users
+Multi-Agent Orchestration
+The Rules That Prevent Chaos
+The Memory System
+Three-Tier Hierarchy
+How Memory Recall Works
+Context Compression — Beating the Context Window
+The 15 Engineering Principles That Make It All Work
+25 Things That Blew My Mind
+What This Teaches Us
+Anthropic's Claude Code source code just leaked. 512,000 lines of TypeScript. 1,900 files. The production-grade AI coding assistant that developers have been raving about — fully exposed.
+
+I went through all of it. Not skimmed. Read.
+
+And honestly? It's one of the most impressive pieces of software engineering I've ever seen. Not because of some magic AI sauce — but because of the relentless, obsessive engineering that makes it feel effortless. The kind of engineering where you can tell that every single line was written by someone who's been burned by production at 3 AM.
+
+Here's what I found.
+
+Table of Contents
+The Core Loop — How a Single Message Becomes a Response
+5 Layers of Context Compression
+The Retry System — 823 Lines of Battle-Tested Recovery
+38 Tools — The Full Arsenal
+The Permission System — 6 Layers Deep
+14,902 Lines of System Prompt
+Multi-Agent Orchestration
+The Memory System
+Context Compression — Beating the Context Window
+The 15 Engineering Principles That Make It All Work
+25 Things That Blew My Mind
+The Core Loop — How a Single Message Becomes a Response
+Here's what surprised me the most: despite 512K lines of code, the entire product boils down to one async generator in query.ts — 1,730 lines that orchestrate everything:
+
+while (true):
+  1. Prepare messages (compress conversation if too long)
+  2. Call Anthropic API with streaming
+  3. Collect response + tool_use blocks
+  4. Handle errors silently (prompt-too-long, max-output-tokens)
+  5. Execute tools (parallel where safe, sequential where not)
+  6. Check budgets (tokens, dollars, turns)
+  7. If tools were used → loop again
+  8. Else → yield final response, exit
+
+That's it. Everything else — the permission system, the retry logic, the compression layers, the UI — is infrastructure to make this loop safe, fast, and reliable. 512K lines of "everything else." When you think about it, that's kind of beautiful. The core idea is dead simple. The hard part is making it bulletproof.
+
+The "Withholding" Pattern
+This one genuinely made me stop and appreciate the thinking behind it. When the API returns an error like "prompt too long," Claude Code doesn't show it to you. Instead:
+
+if (reactiveCompact?.isWithheldPromptTooLong(message)) {
+  withheld = true  // Don't yield to UI — user never sees this
+}
+assistantMessages.push(message)  // But still track for recovery
+
+It silently compresses the conversation and retries. You never know there was a problem.
+
+Why? Because Claude Code runs inside VS Code, desktop apps, and the SDK. These consumers often terminate the session on any error. Showing a recoverable error would kill your session for something the system could have fixed on its own. That's the kind of thoughtfulness that separates a product from a prototype — the user should only see problems they actually need to care about.
+
+Max Output Token Escalation
+This is another one of those "someone clearly thought hard about the UX here" moments:
+
+Silent escalation: Bumps from 8K → 64K tokens. No user notification.
+Multi-turn recovery: Lets the truncated response through, asks Claude to continue.
+Surface error: Only if both fail does the user see anything.
+Why not always use 64K? Because larger limits cost more and can make the model ramble. Start small, escalate only when needed. It's the kind of cost-conscious design you'd expect from a team that's probably processing millions of API calls a day.
+
+The Death Spiral Guard
+This one is my favorite example of "a single line of code preventing disaster." A single boolean prevents a catastrophic infinite loop:
+
+hasAttemptedReactiveCompact  // Preserved across stop-hook retries
+
+Without this: conversation too long → compress → still too long → error → stop hook retries → compress again → still too long → ... burning thousands of dollars in API calls forever.
+
+One boolean. That's all it takes. And I guarantee you this boolean exists because someone, at some point, watched this exact spiral happen in production. You can almost feel the incident report behind the code.
+
+5 Layers of Context Compression
+Before every API call, the conversation goes through up to 5 compression stages. What I love about this design is the progressive approach — each layer is cheaper than the next, so you only pay for what you need:
+
+Layer   What It Does    Why This Order
+Tool Result Budget  Caps size of each tool result   Cheapest — raw data reduction first
+Snip Compact    Deletes old conversation history    Removes bulk before detailed work
+Microcompact    Caches tool results to disk, replaces with references   After snip — reads IDs that snip preserves
+Context Collapse    Archives groups of messages into summaries  May avoid the expensive next step
+Autocompact Full LLM-powered summarization  Last resort — costs API tokens
+Order matters. Getting it wrong wastes computation or produces incorrect results. Each layer composes with the previous ones. This is the kind of layered design that looks obvious in hindsight but probably took weeks of iteration to get right.
+
+The Retry System — 823 Lines of Battle-Tested Recovery
+823 lines just for retry logic. Let that sink in. Most apps have maybe 10 lines of retry code — "try 3 times with a 1 second delay." Anthropic has 823 lines because they've clearly hit every possible failure mode in production:
+
+Error received
+  ├─ 401 Unauthorized → Refresh OAuth token, retry once
+  ├─ 429 Rate Limited
+  │   ├─ Short delay (<20s) → Wait, keep fast mode (preserve cache)
+  │   └─ Long delay → Switch to standard speed (10 min cooldown)
+  ├─ 529 Overloaded
+  │   ├─ Background task? → Don't retry (reduces cascade load)
+  │   ├─ 3+ consecutive 529s? → Fallback from Opus to Sonnet
+  │   └─ Else → Exponential backoff with jitter
+  ├─ ECONNRESET/EPIPE → Disable HTTP keep-alive, fresh connection
+  └─ x-should-retry header → Trust server's guidance
+
+What really impressed me here is the nuance. Background tasks don't retry during 529s — because during a capacity crunch, every retry makes things worse for everyone. That's systems-level thinking. They're not just protecting their own users; they're protecting the entire platform's stability.
+
+The Persistent Retry Mode
+When Claude Code runs in a container (no human at the keyboard), it retries forever:
+
+while (remaining > 0) {
+  yield createSystemAPIErrorMessage(error, remaining, ...)  // "I'm still here"
+  await sleep(30_000, signal)
+  remaining -= 30_000
+}
+attempt = maxRetries  // Never terminate the loop
+
+The 30-second heartbeat is a clever detail — container orchestrators kill "idle" processes. So the system essentially says "I'm alive, just waiting" every 30 seconds. It's one of those things that seems obvious once you see it, but I bet the first version didn't have this and they lost jobs to Kubernetes thinking the process had crashed.
+
+The 529 Pre-seeding Trick
+This one's subtle but shows real engineering maturity:
+
+initialConsecutive529Errors?: number  // Carry from streaming attempt
+
+When streaming hits 529 errors and falls back to non-streaming, the 529 count carries over. Without this, you'd need 6 total 529s before fallback instead of a consistent 3. The kind of detail that only matters at scale — and they nailed it.
+
+38 Tools — The Full Arsenal
+Claude Code ships with 38 tools — each a self-contained module with schema validation, permission checks, concurrency declarations, and execution logic. But what really stands out is how much defensive engineering goes into each one.
+
+The Heavy Hitters
+BashTool — This is where you can really tell the team has been through some things. It's the most complex tool by far, and every security measure feels like it was born from a real incident:
+
+Shell AST parsing via tree-sitter (not just regex!) for security
+Sleep pattern detection — blocks sleep 10 && curl ... because polling loops waste tokens
+IFS injection detection, brace expansion validation, process substitution defense
+Zsh module blocklist: zmodload, sysopen, syswrite, zpty, ztcp
+Somebody at Anthropic clearly spent a lot of time thinking about how a confused AI model could accidentally (or be tricked into) running dangerous shell commands. The depth of the security hardening here is genuinely impressive.
+
+FileReadTool — Looks simple on the surface, but there's a delightful macOS edge case buried in here:
+
+macOS uses a thin space (U+202F) instead of a regular space before "AM/PM" in screenshot filenames. So when a user says "read this screenshot" and it fails, the tool automatically tries the other space character. You know this was added because some engineer spent hours debugging "why can't it find the screenshot file?" before realizing the invisible unicode difference. That's production software — where invisible characters haunt your dreams.
+
+FileEditTool — String replacement instead of full rewrites. Smart choice. But the smart quote normalization is what caught my eye — macOS silently converts "hello" to "hello" (curly quotes) in many apps. When you copy-paste code from Notes or Slack and use it as your edit target, the curly quotes won't match the straight quotes in your actual code. The tool handles this transparently. Little things like this are what make a tool feel like it "just works."
+
+Concurrency Model
+This design is really well thought out. Tools declare whether they're safe to run in parallel:
+
+canExecuteTool(isConcurrencySafe) {
+  const executing = this.tools.filter(t => t.status === 'executing')
+  return executing.length === 0 ||
+    (isConcurrencySafe && executing.every(t => t.isConcurrencySafe))
+}
+
+Reading two files? Parallel. Running npm install while editing a file? Sequential. And concurrency safety is input-dependent — cat file.txt is safe, rm -rf build/ is not. The same tool can be concurrent or exclusive depending on what it's doing. That's a level of granularity most systems don't bother with, and it shows in the performance.
+
+Sibling Error Cascading — Only for Bash
+Here's a design decision I really respect: when a bash command fails, all sibling tools are canceled. But when a file read fails? The others continue.
+
+Why the asymmetry? Bash commands form implicit dependency chains (mkdir build → cp src/* build/). If the first fails, the rest are pointless. File reads are independent operations. Most systems would either cancel everything or cancel nothing — the selective approach shows real understanding of how their tools are actually used.
+
+The Permission System — 6 Layers Deep
+Every tool call passes through a 6-layer decision pipeline before execution. Six layers might sound like overkill, but when your product can run arbitrary shell commands on someone's machine, there's no such thing as too cautious:
+
+Tool Call Arrives
+  │
+  ├─ Layer 1: Input Validation
+  ├─ Layer 2: Blanket Deny Rules
+  ├─ Layer 3: Tool-Specific Checks
+  ├─ Layer 4: Allow Rules (pattern matching)
+  ├─ Layer 5: Mode-Specific Logic (user prompt / ML classifier / auto-approve)
+  └─ Layer 6: Circuit Breaker (3 consecutive ML denials → ask user)
+
+The Auto-Mode ML Classifier
+This is where it gets really interesting. They're using an AI to decide if another AI's actions are safe:
+
+Fast check (~100ms): Known patterns — "reading a file is always safe"
+Thinking mode (~1-2s): Ambiguous cases — "is npm run build safe?"
+Fail-closed: If the classifier is unavailable → deny. Never default to allow. This principle alone puts them ahead of most permission systems I've seen. So many products default to "allow" when uncertain — that's how you get security incidents.
+
+And the circuit breaker on Layer 6? If the ML classifier denies 3 actions in a row, it falls back to asking the user. Because sometimes the classifier is just being overly cautious, and you don't want it permanently blocking legitimate work. It's the balance between safety and usability — and they've threaded the needle well.
+
+8 Permission Rule Sources
+Every decision records its source and reason. Fully auditable. You can always answer "why was this allowed?" or "why was this denied?" In my experience, most permission systems can tell you WHAT happened but not WHY. This one does both.
+
+14,902 Lines of System Prompt
+When I first saw this number I had to re-count. The system prompt isn't a static text file. It's 14,902 lines of TypeScript that dynamically generates the prompt based on context, model, user, and features.
+
+The Cache Boundary
+The prompt is split by __SYSTEM_PROMPT_DYNAMIC_BOUNDARY__:
+
+Before (static, cached): Identity, tools, coding style, safety rules. Same bytes every API call → cached, cheap.
+After (dynamic): MCP connections, memory, environment info. Changes per request.
+The financial impact: If fully dynamic, each API call costs ~$0.50-$1.00 extra. By keeping 70% static, Anthropic saves millions of dollars across all users. This is the kind of optimization that only matters at massive scale — and the fact that the architecture was designed around it from the start tells you a lot about Anthropic's engineering culture.
+
+This obsession with cache stability is honestly kind of beautiful in its intensity:
+
+Tool lists sorted alphabetically (adding one tool doesn't shift others)
+Fork children inherit the parent's frozen prompt bytes (avoids feature flag drift)
+MCP instructions placed in the dynamic section (servers connect/disconnect)
+Every byte is sacred when cache misses cost real money.
+
+Different Prompts for Different Users
+Section ANT Users (Internal)    External Users
+Code Comments   "Default to writing no comments"    Standard guidance
+Output  Lengthy flowing prose, inverted pyramid "Go straight to the point"
+Verification    "Run tests before claiming done"    Not included
+Brevity "≤25 words between tool calls"  Not included
+The internal users get stricter, more opinionated prompts because Anthropic's own engineers are power users who want maximum efficiency. External users get a more balanced approach. Eating your own dog food and customizing the experience — smart.
+
+Multi-Agent Orchestration
+For complex tasks, Claude Code uses a coordinator pattern. And the rules they've established are a masterclass in distributed system design:
+
+Coordinator (Opus, restricted tools: Agent, SendMessage, TaskStop)
+  ├─ Worker A: "research auth system" (read-only tools)
+  ├─ Worker B: "implement feature" (full tools)
+  └─ Worker C: "write tests" (full tools)
+
+The Rules That Prevent Chaos
+No worker-to-worker communication — all through coordinator (prevents deadlocks)
+Workers notify; coordinator doesn't poll — event-driven, not busy-waiting
+Continue existing workers via SendMessage (reuse context > fresh spawn)
+Scratchpad directory for durable cross-worker state
+Never thank workers — they're internal signals, not conversation partners
+Always synthesize — "Don't say 'based on your findings' — name specific files, line numbers, types"
+Rule 5 made me laugh. They had to explicitly tell the AI to stop being polite to its own sub-processes. And Rule 6 is brilliant — it forces the coordinator to actually process the information instead of just parroting it back. These aren't just engineering decisions; they're prompt engineering decisions shaped by watching the system fail in specific ways.
+
+The Memory System
+Memory lets Claude Code remember things across conversations, and the implementation is more thoughtful than you'd expect:
+
+Three-Tier Hierarchy
+~/.claude/memory/          → User-level (follows you everywhere)
+.claude/memory/            → Project-level (shared via git)
+~/.claude/memory/team/     → Team-level (shared preferences)
+
+How Memory Recall Works
+Scan: Read all .md files (max 200)
+Format: Create a manifest with descriptions and types
+Select: Sonnet picks up to 5 relevant memories
+Freshness caveat: Memories >1 day old get a warning
+Inject: Into the system prompt
+The freshness caveat is a really mature design choice. Instead of blindly trusting old memories, the system tells itself "this might be outdated, verify before acting." Most systems would either trust everything or expire everything — the caveat approach is more nuanced and practical.
+
+Why Sonnet for selection? Opus is overkill for picking from a manifest. Sonnet is fast, cheap, and sufficient. Using the right model for the right job — even within the same product.
+
+Context Compression — Beating the Context Window
+When conversations approach the context limit:
+
+Auto-compact threshold = context_window - 13,000 tokens (buffer)
+
+The compaction process:
+
+Group messages by API round-trip
+Strip images → [image] markers
+LLM summarizes the entire conversation
+Create a boundary marker
+Aggressive GC — drop pre-boundary messages
+Restore key files: up to 5 recently edited files, 50K token budget
+Circuit breaker: After 3 consecutive failures, stop trying. No infinite compaction loops.
+
+That last point — the circuit breaker — is a recurring theme throughout the codebase. They put circuit breakers on everything. It's clear this team has been burned by runaway loops and they've made it a core design principle to prevent them.
+
+The 15 Engineering Principles That Make It All Work
+After reading through the entire codebase, these are the principles I saw repeated everywhere. They're not stated explicitly in the code — they emerge from the patterns:
+
+#   Principle   Why It Matters
+1   Stream first, batch second  Real-time UX > waiting for completion
+2   Fail closed on unknowns Unknown = unsafe. Never default to allow.
+3   Withhold recoverable errors Don't kill sessions over fixable problems
+4   Cache stability is money    One byte change = full re-tokenization cost
+5   Persist before the operation    Crash recovery requires write-ahead
+6   Circuit breakers everywhere Prevents infinite loops burning $$$
+7   Object identity > index Survives circular buffer rotations
+8   Parallel prefetch at startup    CLI startup time IS the UX
+9   Build-time > runtime flags  Dead code removed from binary entirely
+10  Audit everything    Debugging requires knowing WHY
+11  AsyncLocalStorage for isolation No global state mutation across agents
+12  Tombstone orphaned state    Invalid signatures removed, not hidden
+13  Tools self-classify Orchestrator decides without understanding internals
+14  Memory has hierarchy + relevance    Load what matters, not everything
+15  Two-phase context rebuild   Mutations invalidate derived state
+These aren't unique to AI tools. They're universal principles for building production software that actually works at scale. Any team building complex systems could learn from this list.
+
+25 Things That Blew My Mind
+The system prompt is 14,902 lines of TypeScript — not a text file, a program that builds itself
+Thinking blocks have cryptographic signatures — invalid across model fallbacks, requiring "tombstones" to clean up
+MCP tool timeout is 27.8 hours — nearly a full day, because CI/CD pipelines really do take that long
+A single boolean prevents a death spiral that would burn thousands in API calls. Someone learned this the hard way.
+macOS screenshots use U+202F (thin space) — an invisible character that caused real debugging nightmares
+UNC paths blocked on Windows to prevent NTLM credential leaks. Security thinking at this level is rare.
+/dev/zero and /dev/random are blocklisted — because an AI asking to read infinite data would hang forever
+Model codenames are masked: "cap*-v2-fast" prevents internal name leaks in screenshots. Love the attention to detail.
+Google Vertex auth skips the metadata server — avoids a 12-second timeout that plagued early users outside GCP
+Bedrock/Vertex clients use as unknown as Anthropic — with the honest comment: "we have always been lying about the return type." Peak engineering honesty.
+Fork children produce byte-identical system prompts for cache sharing. This saves 50-70% on prompt costs.
+The coordinator prompt says "Never thank workers" — because the AI kept being polite to its own sub-processes
+Memories >1 day old get staleness warnings — trust but verify, automated
+Persistent retry mode keeps sessions alive forever with 30s heartbeats to dodge container kills
+/simplify launches 3 parallel agents for code review — one for reuse, one for quality, one for efficiency
+Slack's OAuth returns HTTP 200 on errors — and Anthropic wrote custom detection for this non-standard behavior
+File descriptor passing is the most secure auth method — invisible to ps aux and other processes
+Smart quote normalization for macOS curly→straight conversions. The kind of bug that takes hours to find.
+Zsh module blocklist prevents shell escapes via zmodload, sysopen, ztcp — serious security hardening
+The cyber risk instruction says "DO NOT MODIFY WITHOUT SAFEGUARDS TEAM REVIEW" — process discipline baked into code comments
+Diminishing returns detection stops after <500 new tokens across 3 attempts. Saves money and user patience.
+Voice input processes 16-bit signed LE PCM with RMS amplitude for a waveform visualization
+The UI is React rendered in the terminal via a custom Ink reconciler + WASM Yoga layout engine
+Vim mode is a complete state machine — motions, operators, text objects, dot-repeat. Not a toy.
+x-client-request-id (UUID) injected into every API call — because when a request times out, you have no server ID to reference
+What This Teaches Us
+Claude Code isn't impressive because of AI magic. It's impressive because of relentless engineering discipline.
+
+Every edge case has been hit in production and solved. Every error has a recovery path. Every performance bottleneck has been measured and addressed. Every security hole has been plugged. You can feel the weight of thousands of production incidents behind the code — not because it's messy, but because it's thorough in a way that only comes from real-world pain.
+
+The patterns here — circuit breakers, cache stability, fail-closed security, withholding recoverable errors, streaming-first UX — aren't unique to AI tools. They're universal principles for building production software that actually works.
+
+The fact that it's 512K lines of TypeScript for what looks like "a CLI that talks to an API" tells you everything about the gap between a demo and a product. And honestly, I have a lot of respect for the team that built this.
+
+Want the full deep-dive with 4 extra sections — the UI system, build pipeline, authentication, and slash commands? Read the companion post: Claude Code Source Leaked — Every System Explained From Scratch (512K Lines Broken Down).
+
+If you found this useful, let's connect — I write about software architecture, AI tools, and the engineering behind production systems.
+
+Connect with me on LinkedIn
+
+Comments
+Join the discussion
+No comments yet. Be the first to comment.
+
+More from this blog
+Micro Frontends: The Ultimate Guide — React, Vite, Next.js, React Native & Module Federation
+Everything you need to know about micro frontends — architecture, Module Federation, Next.js multi-zones, mobile super apps, and the trade-offs nobody warns you about
+
+Apr 9, 2026
+·34 min read
+The Axios Hack Explained — How North Korean Hackers Hijacked npm's Most Popular HTTP Library
+A stolen token, a phantom dependency, a self-destructing RAT — and 3 hours that shook the entire JavaScript ecosystem. The complete breakdown of the Axios supply chain attack.
+
+Apr 5, 2026
+·18 min read
+Claude Code Source Leaked — Every System Explained From Scratch (512K Lines Broken Down)
+The complete beginner-friendly breakdown of Anthropic's AI coding assistant. Query engine, 38 tools, 6-layer permissions, retry logic, React-in-terminal UI, memory, authentication, build system — every system explained with zero jargon.
+
+Apr 1, 2026
+·26 min read
+How to Choose the Right Database for Your Use Case (Beginner to Advanced)
+A comprehensive guide to picking the perfect database — from fundamentals to production-grade decision-making
+
+Mar 17, 2026
+·27 min read
+Tech journal
+
+21 posts
+
+© 2026 Tech journal
+
+Members
+Archive
+Privacy
+Terms
+Sitemap
+RSS

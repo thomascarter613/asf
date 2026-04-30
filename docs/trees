@@ -1,0 +1,202 @@
+aic/                                    ACCESS TIER
+├── model-training/                     [PRIVATE — RESTRICTED: ML-CORE]
+├── inference-engine/                   [PRIVATE — RESTRICTED: ML-CORE]
+├── constitutional-ai/                  [PRIVATE — RESTRICTED: SAFETY]
+├── data-pipeline/                      [PRIVATE — RESTRICTED: DATA]
+├── platform/                           [PRIVATE — INTERNAL: PLATFORM]
+├── web/                                [PRIVATE — INTERNAL: PRODUCT]
+├── evals/                              [PRIVATE — INTERNAL: QUALITY]
+├── internal-tooling/                   [PRIVATE — INTERNAL: INFRA]
+├── security/                           [PRIVATE — RESTRICTED: SECURITY]
+├── aic-sdk-python/                     [PUBLIC]
+├── aic-sdk-typescript/                 [PUBLIC]
+├── aic-sdk-go/                         [PUBLIC]
+├── model-spec/                         [PUBLIC]
+├── mcp/                                [PUBLIC]
+└── quickstarts/                        [PUBLIC]
+
+---
+
+model-training/
+├── .github/
+│   ├── workflows/
+│   │   ├── lint.yml
+│   │   ├── type-check.yml
+│   │   ├── unit-tests.yml
+│   │   ├── integration-tests.yml
+│   │   ├── kernel-tests.yml
+│   │   └── eval-gate.yml               # Blocks merges that regress evals
+│   ├── CODEOWNERS                       # ML-CORE team only
+│   ├── pull_request_template.md
+│   ├── ISSUE_TEMPLATE/
+│   │   ├── bug_report.md
+│   │   └── regression.md
+│   └── SECURITY.md
+├── .gitignore
+├── .gitattributes                       # LFS for large test fixtures
+├── .pre-commit-config.yaml             # ruff, mypy, clang-format
+├── .python-version                      # 3.12.x pinned
+├── .env.example
+├── .editorconfig
+├── README.md
+├── CONTRIBUTING.md
+├── PROPRIETARY                          # Legal notice, no license
+├── pyproject.toml                       # ruff, mypy, pytest config
+├── uv.lock
+├── Makefile
+├── CMakeLists.txt                       # Top-level C++/CUDA build
+│
+├── docker/
+│   ├── Dockerfile.train                 # CUDA base, training deps
+│   ├── Dockerfile.eval                  # Lighter eval image
+│   ├── Dockerfile.dev                   # Dev environment
+│   └── docker-compose.dev.yml
+│
+├── scripts/
+│   ├── setup.sh                         # Dev environment bootstrap
+│   ├── launch_train.sh                  # Wrapper for distributed launch
+│   ├── launch_eval.sh
+│   ├── sync_checkpoints.sh             # S3/GCS checkpoint sync
+│   ├── convert_checkpoint.sh           # HF → internal format
+│   └── profile_kernels.sh
+│
+├── configs/
+│   ├── base.yaml                        # Hydra base config
+│   ├── model/
+│   │   ├── claude-sonnet.yaml
+│   │   ├── claude-opus.yaml
+│   │   └── claude-haiku.yaml
+│   ├── training/
+│   │   ├── pretrain.yaml
+│   │   ├── sft.yaml
+│   │   ├── rlhf.yaml
+│   │   └── cai.yaml                    # Constitutional AI
+│   ├── data/
+│   │   ├── pretrain_mix.yaml
+│   │   └── finetuning_mix.yaml
+│   └── cluster/
+│       ├── local.yaml
+│       ├── aws-p4d.yaml
+│       └── aws-p5.yaml
+│
+├── src/
+│   ├── __init__.py
+│   │
+│   ├── models/
+│   │   ├── __init__.py
+│   │   ├── architecture.py              # Model definition
+│   │   ├── attention.py                 # MHA, GQA, MLA variants
+│   │   ├── mlp.py                       # SwiGLU, MoE variants
+│   │   ├── embeddings.py
+│   │   ├── normalization.py             # RMSNorm, LayerNorm
+│   │   ├── rope.py                      # Rotary positional embeddings
+│   │   ├── kv_cache.py
+│   │   └── config.py                    # Model config dataclass
+│   │
+│   ├── training/
+│   │   ├── __init__.py
+│   │   ├── trainer.py                   # Main training loop
+│   │   ├── distributed.py               # FSDP, DDP, tensor parallel
+│   │   ├── checkpointing.py
+│   │   ├── curriculum.py                # Data curriculum scheduling
+│   │   ├── loss.py                      # Cross-entropy, auxiliary losses
+│   │   ├── optimizer.py                 # AdamW, Muon, schedules
+│   │   ├── gradient_clipping.py
+│   │   └── mixed_precision.py
+│   │
+│   ├── data/
+│   │   ├── __init__.py
+│   │   ├── dataset.py                   # WebDataset, streaming loaders
+│   │   ├── tokenizer.py                 # BPE tokenizer wrapper
+│   │   ├── preprocessing.py
+│   │   ├── sampling.py                  # Domain mixing, temperature sampling
+│   │   ├── collation.py                 # Padding, packing
+│   │   ├── filters.py                   # Quality/safety filters
+│   │   └── deduplication.py             # MinHash, exact dedup
+│   │
+│   ├── rlhf/
+│   │   ├── __init__.py
+│   │   ├── reward_model.py
+│   │   ├── ppo.py                       # PPO implementation
+│   │   ├── grpo.py                      # Group relative policy opt
+│   │   ├── dpo.py                       # Direct preference optimization
+│   │   ├── constitutional.py            # CAI critique/revision
+│   │   ├── preference_data.py           # Preference dataset loaders
+│   │   └── kl_controller.py             # KL divergence controller
+│   │
+│   ├── kernels/
+│   │   ├── __init__.py
+│   │   ├── attention/
+│   │   │   ├── flash_attention_fwd.cu
+│   │   │   ├── flash_attention_bwd.cu
+│   │   │   ├── flash_attention.cuh
+│   │   │   ├── varlen_attn.cu
+│   │   │   └── bindings.cpp             # pybind11
+│   │   ├── matmul/
+│   │   │   ├── fused_matmul.cu
+│   │   │   ├── int8_matmul.cu
+│   │   │   └── bindings.cpp
+│   │   ├── normalization/
+│   │   │   ├── rms_norm.cu
+│   │   │   └── bindings.cpp
+│   │   ├── activations/
+│   │   │   ├── swiglu.cu
+│   │   │   └── bindings.cpp
+│   │   └── CMakeLists.txt
+│   │
+│   └── utils/
+│       ├── __init__.py
+│       ├── logging.py                   # Structured JSON logging
+│       ├── metrics.py                   # W&B / internal metrics sink
+│       ├── profiling.py                 # CUDA profiling helpers
+│       ├── seeding.py
+│       ├── cluster.py                   # SLURM/Ray cluster helpers
+│       └── registry.py                  # Model/config registry
+│
+├── tests/
+│   ├── __init__.py
+│   ├── conftest.py
+│   ├── unit/
+│   │   ├── test_attention.py
+│   │   ├── test_rope.py
+│   │   ├── test_loss.py
+│   │   ├── test_tokenizer.py
+│   │   ├── test_sampling.py
+│   │   └── test_kernels.py
+│   ├── integration/
+│   │   ├── test_training_loop.py
+│   │   ├── test_distributed.py
+│   │   ├── test_checkpointing.py
+│   │   └── test_rlhf_loop.py
+│   └── fixtures/
+│       ├── tiny_model_config.yaml
+│       └── sample_batch.pkl.lfs
+│
+├── evals/
+│   ├── __init__.py
+│   ├── run_evals.py                     # Entry point
+│   ├── benchmarks/
+│   │   ├── mmlu.py
+│   │   ├── humaneval.py
+│   │   ├── gsm8k.py
+│   │   ├── hellaswag.py
+│   │   ├── math.py
+│   │   └── swe_bench.py
+│   ├── safety/
+│   │   ├── harmlessness.py
+│   │   └── honesty.py
+│   └── internal/
+│       ├── claude_score.py              # Internal eval suite
+│       └── regression_suite.py
+│
+├── notebooks/
+│   ├── loss_analysis.ipynb
+│   ├── attention_visualization.ipynb
+│   ├── reward_model_analysis.ipynb
+│   └── tokenizer_analysis.ipynb
+│
+└── slurm/
+    ├── train_job.sbatch
+    ├── eval_job.sbatch
+    ├── array_job.sbatch
+    └── interactive.sbatch

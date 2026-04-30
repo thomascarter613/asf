@@ -1,0 +1,1897 @@
+# AIC Engineering Repository Landscape Design
+### File & Folder Trees
+
+---
+
+## Repository Index
+
+```
+aic/                                    ACCESS TIER
+├── model-training/                     [PRIVATE — RESTRICTED: ML-CORE]
+├── inference-engine/                   [PRIVATE — RESTRICTED: ML-CORE]
+├── constitutional-ai/                  [PRIVATE — RESTRICTED: SAFETY]
+├── data-pipeline/                      [PRIVATE — RESTRICTED: DATA]
+├── platform/                           [PRIVATE — INTERNAL: PLATFORM]
+├── web/                                [PRIVATE — INTERNAL: PRODUCT]
+├── evals/                              [PRIVATE — INTERNAL: QUALITY]
+├── internal-tooling/                   [PRIVATE — INTERNAL: INFRA]
+├── security/                           [PRIVATE — RESTRICTED: SECURITY]
+├── aic-sdk-python/                     [PUBLIC]
+├── aic-sdk-typescript/                 [PUBLIC]
+├── aic-sdk-go/                         [PUBLIC]
+├── model-spec/                         [PUBLIC]
+├── mcp/                                [PUBLIC]
+└── quickstarts/                        [PUBLIC]
+```
+
+---
+
+## 1. `model-training` — [PRIVATE — RESTRICTED: ML-CORE]
+> PyTorch training infrastructure, RLHF, Constitutional AI training loops,
+> distributed training orchestration, checkpoint management.
+> Languages: Python, C++, CUDA, SLURM shell scripts.
+
+```
+model-training/
+├── .github/
+│   ├── workflows/
+│   │   ├── lint.yml
+│   │   ├── type-check.yml
+│   │   ├── unit-tests.yml
+│   │   ├── integration-tests.yml
+│   │   ├── kernel-tests.yml
+│   │   └── eval-gate.yml               # Blocks merges that regress evals
+│   ├── CODEOWNERS                       # ML-CORE team only
+│   ├── pull_request_template.md
+│   ├── ISSUE_TEMPLATE/
+│   │   ├── bug_report.md
+│   │   └── regression.md
+│   └── SECURITY.md
+├── .gitignore
+├── .gitattributes                       # LFS for large test fixtures
+├── .pre-commit-config.yaml             # ruff, mypy, clang-format
+├── .python-version                      # 3.12.x pinned
+├── .env.example
+├── .editorconfig
+├── README.md
+├── CONTRIBUTING.md
+├── PROPRIETARY                          # Legal notice, no license
+├── pyproject.toml                       # ruff, mypy, pytest config
+├── uv.lock
+├── Makefile
+├── CMakeLists.txt                       # Top-level C++/CUDA build
+│
+├── docker/
+│   ├── Dockerfile.train                 # CUDA base, training deps
+│   ├── Dockerfile.eval                  # Lighter eval image
+│   ├── Dockerfile.dev                   # Dev environment
+│   └── docker-compose.dev.yml
+│
+├── scripts/
+│   ├── setup.sh                         # Dev environment bootstrap
+│   ├── launch_train.sh                  # Wrapper for distributed launch
+│   ├── launch_eval.sh
+│   ├── sync_checkpoints.sh             # S3/GCS checkpoint sync
+│   ├── convert_checkpoint.sh           # HF → internal format
+│   └── profile_kernels.sh
+│
+├── configs/
+│   ├── base.yaml                        # Hydra base config
+│   ├── model/
+│   │   ├── claude-sonnet.yaml
+│   │   ├── claude-opus.yaml
+│   │   └── claude-haiku.yaml
+│   ├── training/
+│   │   ├── pretrain.yaml
+│   │   ├── sft.yaml
+│   │   ├── rlhf.yaml
+│   │   └── cai.yaml                    # Constitutional AI
+│   ├── data/
+│   │   ├── pretrain_mix.yaml
+│   │   └── finetuning_mix.yaml
+│   └── cluster/
+│       ├── local.yaml
+│       ├── aws-p4d.yaml
+│       └── aws-p5.yaml
+│
+├── src/
+│   ├── __init__.py
+│   │
+│   ├── models/
+│   │   ├── __init__.py
+│   │   ├── architecture.py              # Model definition
+│   │   ├── attention.py                 # MHA, GQA, MLA variants
+│   │   ├── mlp.py                       # SwiGLU, MoE variants
+│   │   ├── embeddings.py
+│   │   ├── normalization.py             # RMSNorm, LayerNorm
+│   │   ├── rope.py                      # Rotary positional embeddings
+│   │   ├── kv_cache.py
+│   │   └── config.py                    # Model config dataclass
+│   │
+│   ├── training/
+│   │   ├── __init__.py
+│   │   ├── trainer.py                   # Main training loop
+│   │   ├── distributed.py               # FSDP, DDP, tensor parallel
+│   │   ├── checkpointing.py
+│   │   ├── curriculum.py                # Data curriculum scheduling
+│   │   ├── loss.py                      # Cross-entropy, auxiliary losses
+│   │   ├── optimizer.py                 # AdamW, Muon, schedules
+│   │   ├── gradient_clipping.py
+│   │   └── mixed_precision.py
+│   │
+│   ├── data/
+│   │   ├── __init__.py
+│   │   ├── dataset.py                   # WebDataset, streaming loaders
+│   │   ├── tokenizer.py                 # BPE tokenizer wrapper
+│   │   ├── preprocessing.py
+│   │   ├── sampling.py                  # Domain mixing, temperature sampling
+│   │   ├── collation.py                 # Padding, packing
+│   │   ├── filters.py                   # Quality/safety filters
+│   │   └── deduplication.py             # MinHash, exact dedup
+│   │
+│   ├── rlhf/
+│   │   ├── __init__.py
+│   │   ├── reward_model.py
+│   │   ├── ppo.py                       # PPO implementation
+│   │   ├── grpo.py                      # Group relative policy opt
+│   │   ├── dpo.py                       # Direct preference optimization
+│   │   ├── constitutional.py            # CAI critique/revision
+│   │   ├── preference_data.py           # Preference dataset loaders
+│   │   └── kl_controller.py             # KL divergence controller
+│   │
+│   ├── kernels/
+│   │   ├── __init__.py
+│   │   ├── attention/
+│   │   │   ├── flash_attention_fwd.cu
+│   │   │   ├── flash_attention_bwd.cu
+│   │   │   ├── flash_attention.cuh
+│   │   │   ├── varlen_attn.cu
+│   │   │   └── bindings.cpp             # pybind11
+│   │   ├── matmul/
+│   │   │   ├── fused_matmul.cu
+│   │   │   ├── int8_matmul.cu
+│   │   │   └── bindings.cpp
+│   │   ├── normalization/
+│   │   │   ├── rms_norm.cu
+│   │   │   └── bindings.cpp
+│   │   ├── activations/
+│   │   │   ├── swiglu.cu
+│   │   │   └── bindings.cpp
+│   │   └── CMakeLists.txt
+│   │
+│   └── utils/
+│       ├── __init__.py
+│       ├── logging.py                   # Structured JSON logging
+│       ├── metrics.py                   # W&B / internal metrics sink
+│       ├── profiling.py                 # CUDA profiling helpers
+│       ├── seeding.py
+│       ├── cluster.py                   # SLURM/Ray cluster helpers
+│       └── registry.py                  # Model/config registry
+│
+├── tests/
+│   ├── __init__.py
+│   ├── conftest.py
+│   ├── unit/
+│   │   ├── test_attention.py
+│   │   ├── test_rope.py
+│   │   ├── test_loss.py
+│   │   ├── test_tokenizer.py
+│   │   ├── test_sampling.py
+│   │   └── test_kernels.py
+│   ├── integration/
+│   │   ├── test_training_loop.py
+│   │   ├── test_distributed.py
+│   │   ├── test_checkpointing.py
+│   │   └── test_rlhf_loop.py
+│   └── fixtures/
+│       ├── tiny_model_config.yaml
+│       └── sample_batch.pkl.lfs
+│
+├── evals/
+│   ├── __init__.py
+│   ├── run_evals.py                     # Entry point
+│   ├── benchmarks/
+│   │   ├── mmlu.py
+│   │   ├── humaneval.py
+│   │   ├── gsm8k.py
+│   │   ├── hellaswag.py
+│   │   ├── math.py
+│   │   └── swe_bench.py
+│   ├── safety/
+│   │   ├── harmlessness.py
+│   │   └── honesty.py
+│   └── internal/
+│       ├── claude_score.py              # Internal eval suite
+│       └── regression_suite.py
+│
+├── notebooks/
+│   ├── loss_analysis.ipynb
+│   ├── attention_visualization.ipynb
+│   ├── reward_model_analysis.ipynb
+│   └── tokenizer_analysis.ipynb
+│
+└── slurm/
+    ├── train_job.sbatch
+    ├── eval_job.sbatch
+    ├── array_job.sbatch
+    └── interactive.sbatch
+```
+
+---
+
+## 2. `inference-engine` — [PRIVATE — RESTRICTED: ML-CORE]
+> High-performance C++/CUDA inference runtime. Continuous batching,
+> KV-cache management, speculative decoding, quantization.
+> Languages: C++17/20, CUDA, Python (bindings & orchestration).
+
+```
+inference-engine/
+├── .github/
+│   ├── workflows/
+│   │   ├── build-linux.yml
+│   │   ├── build-cuda.yml
+│   │   ├── benchmark.yml               # Perf regression gate
+│   │   ├── lint-cpp.yml
+│   │   └── python-bindings.yml
+│   ├── CODEOWNERS
+│   └── pull_request_template.md
+├── .gitignore
+├── .gitattributes
+├── .clang-format
+├── .clang-tidy
+├── .pre-commit-config.yaml
+├── .python-version
+├── .env.example
+├── README.md
+├── PROPRIETARY
+├── CMakeLists.txt                       # Root CMake
+├── pyproject.toml                       # Python bindings packaging
+├── uv.lock
+├── Makefile
+│
+├── cmake/
+│   ├── FindCUDA.cmake
+│   ├── FindNCCL.cmake
+│   ├── CompilerOptions.cmake
+│   └── Dependencies.cmake
+│
+├── docker/
+│   ├── Dockerfile.cuda118
+│   ├── Dockerfile.cuda121
+│   └── Dockerfile.dev
+│
+├── scripts/
+│   ├── build.sh
+│   ├── benchmark.sh
+│   ├── profile.sh                       # Nsight profiling
+│   └── load_test.sh
+│
+├── include/
+│   ├── inference/
+│   │   ├── engine.h
+│   │   ├── request.h
+│   │   ├── response.h
+│   │   ├── scheduler.h
+│   │   └── config.h
+│   ├── kernels/
+│   │   ├── attention.cuh
+│   │   ├── cache.cuh
+│   │   └── sampling.cuh
+│   └── utils/
+│       ├── cuda_utils.h
+│       └── memory.h
+│
+├── src/
+│   ├── engine/
+│   │   ├── engine.cpp                   # Core inference engine
+│   │   ├── scheduler.cpp                # Continuous batching scheduler
+│   │   ├── request_queue.cpp
+│   │   ├── model_runner.cpp
+│   │   ├── worker.cpp                   # Per-GPU worker thread
+│   │   └── memory_pool.cpp
+│   ├── kv_cache/
+│   │   ├── kv_cache_manager.cpp
+│   │   ├── paged_attention.cpp          # PagedAttention / vLLM-style
+│   │   └── prefix_cache.cpp             # Shared prefix KV caching
+│   ├── sampling/
+│   │   ├── sampler.cpp
+│   │   ├── top_p.cpp
+│   │   ├── top_k.cpp
+│   │   └── beam_search.cpp
+│   ├── speculative/
+│   │   ├── spec_decoder.cpp             # Speculative decoding
+│   │   ├── draft_model.cpp
+│   │   └── verification.cpp
+│   ├── quantization/
+│   │   ├── int8_quant.cpp
+│   │   ├── fp8_quant.cpp
+│   │   └── awq.cpp
+│   ├── serving/
+│   │   ├── grpc_server.cpp              # gRPC serving interface
+│   │   ├── proto/
+│   │   │   ├── inference.proto
+│   │   │   └── inference.grpc.pb.cc
+│   │   └── health.cpp
+│   └── utils/
+│       ├── cuda_utils.cpp
+│       ├── memory.cpp
+│       ├── logging.cpp
+│       └── metrics.cpp
+│
+├── kernels/
+│   ├── attention/
+│   │   ├── paged_attention_v1.cu
+│   │   ├── paged_attention_v2.cu
+│   │   ├── flash_decode.cu
+│   │   └── rotary_embedding.cu
+│   ├── sampling/
+│   │   ├── top_p_top_k.cu
+│   │   └── penalties.cu
+│   ├── cache/
+│   │   ├── copy_blocks.cu
+│   │   └── reshape_and_cache.cu
+│   └── quantization/
+│       ├── dequant.cu
+│       └── fp8_gemm.cu
+│
+├── python/
+│   ├── __init__.py
+│   ├── bindings.cpp                     # pybind11 bindings
+│   ├── engine.py                        # Python wrapper
+│   ├── client.py                        # gRPC client
+│   └── benchmark.py
+│
+├── tests/
+│   ├── cpp/
+│   │   ├── test_scheduler.cpp
+│   │   ├── test_kv_cache.cpp
+│   │   ├── test_sampler.cpp
+│   │   └── CMakeLists.txt
+│   ├── python/
+│   │   ├── test_engine.py
+│   │   ├── test_client.py
+│   │   └── conftest.py
+│   └── benchmarks/
+│       ├── bench_throughput.cpp
+│       └── bench_latency.cpp
+│
+└── tools/
+    ├── model_converter/                 # Checkpoint → engine format
+    │   ├── convert.py
+    │   └── quantize.py
+    └── profiler/
+        ├── trace_analyzer.py
+        └── kernel_profiler.py
+```
+
+---
+
+## 3. `constitutional-ai` — [PRIVATE — RESTRICTED: SAFETY]
+> Constitutional AI research, RLAIF pipelines, harmlessness evaluation,
+> policy research, red-teaming tooling.
+> Languages: Python.
+
+```
+constitutional-ai/
+├── .github/
+│   ├── workflows/
+│   │   ├── lint.yml
+│   │   ├── tests.yml
+│   │   └── red-team-nightly.yml
+│   ├── CODEOWNERS                       # Safety team only
+│   └── pull_request_template.md
+├── .gitignore
+├── .pre-commit-config.yaml
+├── .python-version
+├── .env.example
+├── README.md
+├── PROPRIETARY
+├── pyproject.toml
+├── uv.lock
+├── Makefile
+│
+├── constitution/
+│   ├── principles.yaml                  # The actual constitutional principles
+│   ├── critique_prompts.yaml
+│   ├── revision_prompts.yaml
+│   └── versions/
+│       ├── v1.0.yaml
+│       ├── v1.1.yaml
+│       └── v2.0.yaml
+│
+├── src/
+│   ├── __init__.py
+│   ├── rlaif/
+│   │   ├── __init__.py
+│   │   ├── critique.py                  # AI critique generation
+│   │   ├── revision.py                  # AI revision pipeline
+│   │   ├── preference_labeling.py       # AI preference labels
+│   │   └── pipeline.py                  # End-to-end RLAIF
+│   ├── red_teaming/
+│   │   ├── __init__.py
+│   │   ├── automated_red_team.py
+│   │   ├── attack_strategies.py
+│   │   ├── jailbreak_detector.py
+│   │   └── report_generator.py
+│   ├── evaluation/
+│   │   ├── __init__.py
+│   │   ├── harmlessness_eval.py
+│   │   ├── helpfulness_eval.py
+│   │   ├── honesty_eval.py
+│   │   ├── bias_eval.py
+│   │   └── crowdworker_integration.py
+│   ├── classifiers/
+│   │   ├── __init__.py
+│   │   ├── harm_classifier.py
+│   │   ├── topic_classifier.py
+│   │   └── sentiment_classifier.py
+│   └── utils/
+│       ├── __init__.py
+│       ├── prompting.py
+│       ├── model_client.py              # Internal API client
+│       └── logging.py
+│
+├── data/
+│   ├── README.md                        # Data lineage docs
+│   ├── constitutions/                   # Versioned constitution exports
+│   ├── red_team_scenarios/
+│   │   ├── README.md
+│   │   └── .gitignore                   # Actual scenarios excluded
+│   └── eval_sets/
+│       └── .gitignore
+│
+├── experiments/
+│   ├── README.md
+│   ├── scaling_laws/
+│   ├── constitution_ablations/
+│   └── red_team_analysis/
+│
+├── notebooks/
+│   ├── harm_distribution_analysis.ipynb
+│   ├── constitution_effectiveness.ipynb
+│   └── red_team_results.ipynb
+│
+└── tests/
+    ├── conftest.py
+    ├── unit/
+    │   ├── test_critique.py
+    │   ├── test_revision.py
+    │   └── test_classifiers.py
+    └── integration/
+        └── test_rlaif_pipeline.py
+```
+
+---
+
+## 4. `data-pipeline` — [PRIVATE — RESTRICTED: DATA]
+> Training data acquisition, cleaning, deduplication, tokenization,
+> quality filtering, and dataset registry.
+> Languages: Python, Rust (for perf-critical pipeline stages), SQL.
+
+```
+data-pipeline/
+├── .github/
+│   ├── workflows/
+│   │   ├── lint.yml
+│   │   ├── tests.yml
+│   │   ├── data-quality-checks.yml
+│   │   └── pipeline-integration.yml
+│   ├── CODEOWNERS
+│   └── pull_request_template.md
+├── .gitignore
+├── .pre-commit-config.yaml
+├── .python-version
+├── .env.example
+├── README.md
+├── PROPRIETARY
+├── pyproject.toml
+├── uv.lock
+├── Cargo.toml                           # Rust workspace for fast stages
+├── Cargo.lock
+├── Makefile
+│
+├── docker/
+│   ├── Dockerfile.pipeline
+│   └── docker-compose.yml
+│
+├── configs/
+│   ├── sources.yaml                     # Data source registry
+│   ├── quality_filters.yaml
+│   └── pipelines/
+│       ├── pretrain.yaml
+│       ├── sft.yaml
+│       └── rlhf.yaml
+│
+├── src/
+│   ├── python/
+│   │   ├── __init__.py
+│   │   ├── acquisition/
+│   │   │   ├── __init__.py
+│   │   │   ├── web_crawler.py
+│   │   │   ├── common_crawl.py
+│   │   │   ├── github_scraper.py
+│   │   │   ├── arxiv_scraper.py
+│   │   │   └── licensed_sources.py
+│   │   ├── cleaning/
+│   │   │   ├── __init__.py
+│   │   │   ├── text_cleaner.py
+│   │   │   ├── html_extractor.py
+│   │   │   ├── language_detector.py
+│   │   │   └── pii_redactor.py         # PII removal
+│   │   ├── quality/
+│   │   │   ├── __init__.py
+│   │   │   ├── perplexity_filter.py
+│   │   │   ├── toxicity_filter.py
+│   │   │   ├── nsfw_filter.py
+│   │   │   ├── length_filter.py
+│   │   │   └── quality_scorer.py
+│   │   ├── deduplication/
+│   │   │   ├── __init__.py
+│   │   │   ├── exact_dedup.py
+│   │   │   ├── minhash_dedup.py
+│   │   │   └── semantic_dedup.py
+│   │   ├── tokenization/
+│   │   │   ├── __init__.py
+│   │   │   ├── tokenizer.py
+│   │   │   └── packing.py
+│   │   ├── registry/
+│   │   │   ├── __init__.py
+│   │   │   ├── dataset_registry.py     # Dataset versioning/tracking
+│   │   │   └── lineage.py
+│   │   └── orchestration/
+│   │       ├── __init__.py
+│   │       ├── ray_pipeline.py
+│   │       └── spark_pipeline.py
+│   │
+│   └── rust/
+│       ├── dedup/
+│       │   ├── src/
+│       │   │   ├── main.rs
+│       │   │   ├── minhash.rs
+│       │   │   └── bloom.rs
+│       │   └── Cargo.toml
+│       └── tokenizer_worker/
+│           ├── src/
+│           │   ├── main.rs
+│           │   └── worker.rs
+│           └── Cargo.toml
+│
+├── migrations/
+│   ├── 0001_create_datasets_table.sql
+│   ├── 0002_add_lineage.sql
+│   └── 0003_add_quality_scores.sql
+│
+├── tests/
+│   ├── conftest.py
+│   ├── unit/
+│   │   ├── test_cleaner.py
+│   │   ├── test_dedup.py
+│   │   ├── test_filters.py
+│   │   └── test_tokenizer.py
+│   └── integration/
+│       └── test_full_pipeline.py
+│
+└── scripts/
+    ├── run_pipeline.sh
+    ├── validate_dataset.sh
+    └── export_stats.sh
+```
+
+---
+
+## 5. `platform` — [PRIVATE — INTERNAL: PLATFORM]
+> Internal polyglot monorepo housing all production backend services.
+> API gateway, context assembly, safety service, memory service,
+> tool orchestrator, MCP proxy, streaming service.
+> Languages: Rust (gateway, streaming, MCP proxy), Python (ML services).
+> Tooling: Cargo workspaces + uv workspaces, Docker, Kubernetes, Terraform.
+
+```
+platform/
+├── .github/
+│   ├── workflows/
+│   │   ├── ci-rust.yml
+│   │   ├── ci-python.yml
+│   │   ├── integration-tests.yml
+│   │   ├── e2e-tests.yml
+│   │   ├── docker-build.yml
+│   │   ├── deploy-staging.yml
+│   │   ├── deploy-production.yml        # Manual approval gate
+│   │   └── security-scan.yml            # Trivy, cargo-audit, pip-audit
+│   ├── CODEOWNERS
+│   ├── pull_request_template.md
+│   ├── ISSUE_TEMPLATE/
+│   │   ├── bug_report.md
+│   │   ├── incident.md
+│   │   └── feature_request.md
+│   └── SECURITY.md
+├── .gitignore
+├── .gitattributes
+├── .editorconfig
+├── .env.example                         # All vars with safe defaults
+├── .env.staging.example
+├── .env.production.example
+├── .pre-commit-config.yaml             # rust fmt, clippy, ruff, mypy
+├── .python-version
+├── README.md
+├── CONTRIBUTING.md
+├── PROPRIETARY
+├── Cargo.toml                           # Rust workspace root
+├── Cargo.lock
+├── pyproject.toml                       # Python workspace root (uv)
+├── uv.lock
+├── Makefile
+├── justfile                             # just task runner
+│
+├── proto/                               # Protobuf definitions (shared)
+│   ├── buf.yaml
+│   ├── buf.gen.yaml
+│   ├── aic/
+│   │   ├── inference/
+│   │   │   ├── v1/
+│   │   │   │   ├── messages.proto
+│   │   │   │   ├── streaming.proto
+│   │   │   │   └── models.proto
+│   │   ├── context/
+│   │   │   └── v1/
+│   │   │       ├── context.proto
+│   │   │       └── memory.proto
+│   │   ├── safety/
+│   │   │   └── v1/
+│   │   │       ├── classify.proto
+│   │   │       └── policy.proto
+│   │   ├── tools/
+│   │   │   └── v1/
+│   │   │       ├── tool.proto
+│   │   │       └── mcp.proto
+│   │   └── common/
+│   │       └── v1/
+│   │           ├── types.proto
+│   │           └── errors.proto
+│   └── gen/                             # Generated code (committed)
+│       ├── rust/
+│       └── python/
+│
+├── services/
+│   │
+│   ├── api-gateway/                     # [RUST — Axum]
+│   │   ├── Cargo.toml
+│   │   ├── README.md
+│   │   ├── .env.example
+│   │   ├── Dockerfile
+│   │   ├── src/
+│   │   │   ├── main.rs
+│   │   │   ├── lib.rs
+│   │   │   ├── config.rs
+│   │   │   ├── app.rs                   # Axum router assembly
+│   │   │   ├── routes/
+│   │   │   │   ├── mod.rs
+│   │   │   │   ├── messages.rs          # POST /v1/messages
+│   │   │   │   ├── models.rs            # GET /v1/models
+│   │   │   │   ├── health.rs
+│   │   │   │   └── admin.rs
+│   │   │   ├── middleware/
+│   │   │   │   ├── mod.rs
+│   │   │   │   ├── auth.rs              # API key / JWT validation
+│   │   │   │   ├── rate_limit.rs        # Token bucket per org/key
+│   │   │   │   ├── quota.rs             # Token quota enforcement
+│   │   │   │   ├── logging.rs           # Request/response logging
+│   │   │   │   ├── tracing.rs           # OpenTelemetry
+│   │   │   │   └── cors.rs
+│   │   │   ├── auth/
+│   │   │   │   ├── mod.rs
+│   │   │   │   ├── api_key.rs
+│   │   │   │   ├── jwt.rs
+│   │   │   │   └── workspace.rs
+│   │   │   ├── upstream/
+│   │   │   │   ├── mod.rs
+│   │   │   │   ├── context_client.rs    # gRPC to context-service
+│   │   │   │   ├── safety_client.rs     # gRPC to safety-service
+│   │   │   │   ├── inference_client.rs  # gRPC to inference-engine
+│   │   │   │   └── tool_client.rs       # gRPC to tool-orchestrator
+│   │   │   ├── streaming/
+│   │   │   │   ├── mod.rs
+│   │   │   │   ├── sse.rs               # Server-sent events
+│   │   │   │   └── transformer.rs       # Inference chunks → SSE events
+│   │   │   └── errors.rs
+│   │   └── tests/
+│   │       ├── integration/
+│   │       │   ├── test_messages.rs
+│   │       │   ├── test_auth.rs
+│   │       │   └── test_rate_limit.rs
+│   │       └── common/
+│   │           └── mod.rs
+│   │
+│   ├── context-service/                 # [PYTHON — FastAPI]
+│   │   ├── pyproject.toml
+│   │   ├── README.md
+│   │   ├── .env.example
+│   │   ├── Dockerfile
+│   │   ├── src/
+│   │   │   ├── __init__.py
+│   │   │   ├── main.py                  # FastAPI app entry point
+│   │   │   ├── config.py
+│   │   │   ├── app.py                   # App factory
+│   │   │   ├── routers/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── context.py           # /context/assemble
+│   │   │   │   └── health.py
+│   │   │   ├── services/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── assembler.py         # Context window assembly
+│   │   │   │   ├── memory_injector.py   # Injects memory into context
+│   │   │   │   ├── tool_injector.py     # Injects tool schemas
+│   │   │   │   ├── system_prompt.py     # System prompt templating
+│   │   │   │   ├── truncator.py         # Context window truncation
+│   │   │   │   └── compressor.py        # Long context compression
+│   │   │   ├── clients/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── memory_client.py     # gRPC to memory-service
+│   │   │   │   └── operator_client.py   # Operator config fetch
+│   │   │   ├── models/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── context.py           # Pydantic models
+│   │   │   │   └── message.py
+│   │   │   └── utils/
+│   │   │       ├── __init__.py
+│   │   │       ├── token_counter.py
+│   │   │       └── logging.py
+│   │   └── tests/
+│   │       ├── conftest.py
+│   │       ├── unit/
+│   │       │   ├── test_assembler.py
+│   │       │   ├── test_truncator.py
+│   │       │   └── test_system_prompt.py
+│   │       └── integration/
+│   │           └── test_context_api.py
+│   │
+│   ├── safety-service/                  # [PYTHON — FastAPI]
+│   │   ├── pyproject.toml
+│   │   ├── README.md
+│   │   ├── .env.example
+│   │   ├── Dockerfile
+│   │   ├── src/
+│   │   │   ├── __init__.py
+│   │   │   ├── main.py
+│   │   │   ├── config.py
+│   │   │   ├── app.py
+│   │   │   ├── routers/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── classify.py          # /classify/input, /classify/output
+│   │   │   │   ├── policy.py            # /policy/evaluate
+│   │   │   │   └── health.py
+│   │   │   ├── classifiers/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── harm_classifier.py   # Multi-label harm classification
+│   │   │   │   ├── topic_classifier.py
+│   │   │   │   ├── child_safety.py      # CSAM detection
+│   │   │   │   ├── weapons.py
+│   │   │   │   └── pii_detector.py
+│   │   │   ├── policy/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── engine.py            # Policy evaluation engine
+│   │   │   │   ├── operator_policy.py   # Per-operator policy overrides
+│   │   │   │   └── constitution.py      # Constitutional AI policy
+│   │   │   ├── models/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── model_loader.py      # Load classifier checkpoints
+│   │   │   │   └── inference.py
+│   │   │   └── utils/
+│   │   │       ├── __init__.py
+│   │   │       └── logging.py
+│   │   └── tests/
+│   │       ├── conftest.py
+│   │       ├── unit/
+│   │       │   ├── test_harm_classifier.py
+│   │       │   └── test_policy_engine.py
+│   │       └── fixtures/
+│   │           ├── safe_samples.json
+│   │           └── .gitignore           # Unsafe samples excluded from VCS
+│   │
+│   ├── memory-service/                  # [PYTHON — FastAPI + pgvector]
+│   │   ├── pyproject.toml
+│   │   ├── README.md
+│   │   ├── .env.example
+│   │   ├── Dockerfile
+│   │   ├── src/
+│   │   │   ├── __init__.py
+│   │   │   ├── main.py
+│   │   │   ├── config.py
+│   │   │   ├── app.py
+│   │   │   ├── routers/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── memory.py            # CRUD for memories
+│   │   │   │   ├── search.py            # Semantic search
+│   │   │   │   └── health.py
+│   │   │   ├── services/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── memory_store.py      # PostgreSQL + pgvector operations
+│   │   │   │   ├── embedder.py          # Text → embedding
+│   │   │   │   ├── extractor.py         # Post-conv memory extraction
+│   │   │   │   ├── ranker.py            # Memory relevance ranking
+│   │   │   │   └── privacy.py           # PII scrubbing before storage
+│   │   │   ├── models/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── memory.py            # SQLAlchemy models
+│   │   │   │   └── schemas.py           # Pydantic schemas
+│   │   │   ├── db/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── session.py
+│   │   │   │   └── migrations/
+│   │   │   │       ├── env.py           # Alembic env
+│   │   │   │       └── versions/
+│   │   │   │           ├── 0001_init.py
+│   │   │   │           ├── 0002_add_pgvector.py
+│   │   │   │           └── 0003_add_user_edits.py
+│   │   │   └── utils/
+│   │   │       ├── __init__.py
+│   │   │       └── logging.py
+│   │   └── tests/
+│   │       ├── conftest.py
+│   │       ├── unit/
+│   │       │   ├── test_extractor.py
+│   │       │   ├── test_ranker.py
+│   │       │   └── test_privacy.py
+│   │       └── integration/
+│   │           └── test_memory_api.py
+│   │
+│   ├── tool-orchestrator/               # [RUST — Axum + Tokio]
+│   │   ├── Cargo.toml
+│   │   ├── README.md
+│   │   ├── .env.example
+│   │   ├── Dockerfile
+│   │   ├── src/
+│   │   │   ├── main.rs
+│   │   │   ├── lib.rs
+│   │   │   ├── config.rs
+│   │   │   ├── app.rs
+│   │   │   ├── routes/
+│   │   │   │   ├── mod.rs
+│   │   │   │   ├── tools.rs             # Tool invocation endpoints
+│   │   │   │   └── health.rs
+│   │   │   ├── tools/
+│   │   │   │   ├── mod.rs
+│   │   │   │   ├── registry.rs          # Tool registry
+│   │   │   │   ├── executor.rs          # Tool execution engine
+│   │   │   │   ├── sandbox.rs           # Sandboxed execution
+│   │   │   │   ├── web_search.rs
+│   │   │   │   ├── web_fetch.rs
+│   │   │   │   ├── computer_use.rs
+│   │   │   │   ├── image_search.rs
+│   │   │   │   └── artifact.rs
+│   │   │   ├── mcp/
+│   │   │   │   ├── mod.rs
+│   │   │   │   └── client.rs            # Delegates to mcp-proxy
+│   │   │   └── errors.rs
+│   │   └── tests/
+│   │       ├── unit/
+│   │       │   ├── test_registry.rs
+│   │       │   └── test_executor.rs
+│   │       └── integration/
+│   │           └── test_tool_api.rs
+│   │
+│   ├── mcp-proxy/                       # [RUST — Axum + Tokio]
+│   │   ├── Cargo.toml
+│   │   ├── README.md
+│   │   ├── .env.example
+│   │   ├── Dockerfile
+│   │   ├── src/
+│   │   │   ├── main.rs
+│   │   │   ├── lib.rs
+│   │   │   ├── config.rs
+│   │   │   ├── app.rs
+│   │   │   ├── routes/
+│   │   │   │   ├── mod.rs
+│   │   │   │   ├── proxy.rs             # MCP SSE proxy
+│   │   │   │   ├── connectors.rs        # Connector registry
+│   │   │   │   └── health.rs
+│   │   │   ├── proxy/
+│   │   │   │   ├── mod.rs
+│   │   │   │   ├── sse_client.rs        # SSE upstream client
+│   │   │   │   ├── auth_injector.rs     # OAuth token injection
+│   │   │   │   ├── tool_filter.rs       # Policy-based tool filtering
+│   │   │   │   └── rate_limiter.rs
+│   │   │   ├── oauth/
+│   │   │   │   ├── mod.rs
+│   │   │   │   ├── token_store.rs
+│   │   │   │   └── refresh.rs
+│   │   │   └── errors.rs
+│   │   └── tests/
+│   │       └── integration/
+│   │           └── test_proxy.rs
+│   │
+│   ├── conversation-store/              # [RUST — PostgreSQL]
+│   │   ├── Cargo.toml
+│   │   ├── README.md
+│   │   ├── .env.example
+│   │   ├── Dockerfile
+│   │   ├── src/
+│   │   │   ├── main.rs
+│   │   │   ├── config.rs
+│   │   │   ├── app.rs
+│   │   │   ├── routes/
+│   │   │   │   ├── mod.rs
+│   │   │   │   ├── conversations.rs
+│   │   │   │   ├── messages.rs
+│   │   │   │   └── health.rs
+│   │   │   ├── db/
+│   │   │   │   ├── mod.rs
+│   │   │   │   ├── pool.rs
+│   │   │   │   └── queries.rs
+│   │   │   └── models/
+│   │   │       ├── mod.rs
+│   │   │       ├── conversation.rs
+│   │   │       └── message.rs
+│   │   ├── migrations/
+│   │   │   ├── 0001_init.sql
+│   │   │   ├── 0002_add_metadata.sql
+│   │   │   └── 0003_add_projects.sql
+│   │   └── tests/
+│   │       └── integration/
+│   │           └── test_conversations.rs
+│   │
+│   └── operator-service/               # [PYTHON — FastAPI]
+│       ├── pyproject.toml
+│       ├── README.md
+│       ├── .env.example
+│       ├── Dockerfile
+│       ├── src/
+│       │   ├── __init__.py
+│       │   ├── main.py
+│       │   ├── config.py
+│       │   ├── app.py
+│       │   ├── routers/
+│       │   │   ├── __init__.py
+│       │   │   ├── operators.py         # Operator CRUD
+│       │   │   ├── policies.py          # Per-operator policy config
+│       │   │   ├── usage.py             # Usage/billing data
+│       │   │   └── health.py
+│       │   ├── models/
+│       │   │   ├── __init__.py
+│       │   │   ├── operator.py
+│       │   │   └── policy.py
+│       │   └── db/
+│       │       ├── __init__.py
+│       │       └── session.py
+│       └── tests/
+│           └── conftest.py
+│
+├── libs/                                # Shared libraries
+│   ├── rust/
+│   │   ├── aic-auth/              # Shared auth primitives
+│   │   │   ├── Cargo.toml
+│   │   │   └── src/
+│   │   │       ├── lib.rs
+│   │   │       ├── api_key.rs
+│   │   │       └── jwt.rs
+│   │   ├── aic-tracing/           # OpenTelemetry setup
+│   │   │   ├── Cargo.toml
+│   │   │   └── src/
+│   │   │       └── lib.rs
+│   │   ├── aic-config/            # Config loading primitives
+│   │   │   ├── Cargo.toml
+│   │   │   └── src/
+│   │   │       └── lib.rs
+│   │   └── aic-errors/            # Shared error types
+│   │       ├── Cargo.toml
+│   │       └── src/
+│   │           └── lib.rs
+│   └── python/
+│       ├── aic-internal-auth/
+│       │   ├── pyproject.toml
+│       │   └── src/
+│       │       └── aic_internal_auth/
+│       │           ├── __init__.py
+│       │           └── client.py
+│       ├── aic-internal-logging/
+│       │   ├── pyproject.toml
+│       │   └── src/
+│       │       └── aic_internal_logging/
+│       │           ├── __init__.py
+│       │           └── logger.py
+│       └── aic-internal-tracing/
+│           ├── pyproject.toml
+│           └── src/
+│               └── aic_internal_tracing/
+│                   ├── __init__.py
+│                   └── otel.py
+│
+├── infra/
+│   ├── terraform/
+│   │   ├── environments/
+│   │   │   ├── staging/
+│   │   │   │   ├── main.tf
+│   │   │   │   ├── variables.tf
+│   │   │   │   └── terraform.tfvars.example
+│   │   │   └── production/
+│   │   │       ├── main.tf
+│   │   │       ├── variables.tf
+│   │   │       └── terraform.tfvars.example  # Actual tfvars in Vault
+│   │   └── modules/
+│   │       ├── eks/
+│   │       ├── rds/
+│   │       ├── elasticache/
+│   │       └── networking/
+│   ├── kubernetes/
+│   │   ├── base/
+│   │   │   ├── api-gateway/
+│   │   │   │   ├── deployment.yaml
+│   │   │   │   ├── service.yaml
+│   │   │   │   ├── hpa.yaml
+│   │   │   │   └── pdb.yaml
+│   │   │   ├── context-service/
+│   │   │   │   ├── deployment.yaml
+│   │   │   │   └── service.yaml
+│   │   │   ├── safety-service/
+│   │   │   │   ├── deployment.yaml
+│   │   │   │   └── service.yaml
+│   │   │   ├── memory-service/
+│   │   │   │   ├── deployment.yaml
+│   │   │   │   └── service.yaml
+│   │   │   ├── tool-orchestrator/
+│   │   │   │   ├── deployment.yaml
+│   │   │   │   └── service.yaml
+│   │   │   ├── mcp-proxy/
+│   │   │   │   ├── deployment.yaml
+│   │   │   │   └── service.yaml
+│   │   │   └── shared/
+│   │   │       ├── namespace.yaml
+│   │   │       ├── network-policies.yaml
+│   │   │       └── rbac.yaml
+│   │   ├── overlays/
+│   │   │   ├── staging/
+│   │   │   │   └── kustomization.yaml
+│   │   │   └── production/
+│   │   │       └── kustomization.yaml
+│   │   └── kustomization.yaml
+│   └── helm/
+│       └── claude-platform/
+│           ├── Chart.yaml
+│           ├── values.yaml
+│           ├── values.staging.yaml
+│           ├── values.production.yaml
+│           └── templates/
+│               └── ...
+│
+├── monitoring/
+│   ├── grafana/
+│   │   ├── dashboards/
+│   │   │   ├── api-gateway.json
+│   │   │   ├── latency-p99.json
+│   │   │   ├── safety-classifier.json
+│   │   │   └── inference-throughput.json
+│   │   └── datasources/
+│   │       └── prometheus.yaml
+│   ├── prometheus/
+│   │   ├── alerts/
+│   │   │   ├── latency.yaml
+│   │   │   ├── error-rate.yaml
+│   │   │   └── safety.yaml
+│   │   └── recording_rules.yaml
+│   └── runbooks/
+│       ├── high-latency.md
+│       ├── safety-classifier-failure.md
+│       └── rate-limit-spike.md
+│
+├── scripts/
+│   ├── bootstrap.sh                     # First-time dev setup
+│   ├── build-all.sh
+│   ├── test-all.sh
+│   ├── migrate-all.sh
+│   └── generate-proto.sh
+│
+└── docs/
+    ├── architecture/
+    │   ├── overview.md
+    │   ├── request-lifecycle.md
+    │   ├── context-assembly.md
+    │   ├── safety-pipeline.md
+    │   └── memory-system.md
+    ├── runbooks/
+    ├── adr/                             # Architecture Decision Records
+    │   ├── 0001-rust-for-gateway.md
+    │   ├── 0002-pgvector-for-memory.md
+    │   └── 0003-grpc-inter-service.md
+    └── onboarding/
+        ├── platform-team.md
+        └── local-dev.md
+```
+
+---
+
+## 6. `web` — [PRIVATE — INTERNAL: PRODUCT]
+> The ai frontend — web, mobile web, desktop PWA.
+> Languages: TypeScript.
+> Stack: Next.js (App Router), React, Tailwind CSS, Radix UI.
+
+```
+web/
+├── .github/
+│   ├── workflows/
+│   │   ├── ci.yml
+│   │   ├── e2e.yml                      # Playwright
+│   │   ├── a11y.yml                     # Accessibility checks
+│   │   ├── bundle-analysis.yml
+│   │   ├── deploy-staging.yml
+│   │   └── deploy-production.yml
+│   ├── CODEOWNERS
+│   └── pull_request_template.md
+├── .gitignore
+├── .gitattributes
+├── .editorconfig
+├── .env.example
+├── .env.local.example
+├── .nvmrc
+├── .node-version
+├── .pre-commit-config.yaml
+├── README.md
+├── CONTRIBUTING.md
+├── PROPRIETARY
+├── package.json
+├── pnpm-lock.yaml
+├── pnpm-workspace.yaml
+├── turbo.json
+├── tsconfig.json
+├── tsconfig.base.json
+├── biome.json
+├── Makefile
+│
+├── apps/
+│   ├── web/                             # Main Next.js app
+│   │   ├── package.json
+│   │   ├── tsconfig.json
+│   │   ├── next.config.ts
+│   │   ├── next-env.d.ts
+│   │   ├── tailwind.config.ts
+│   │   ├── postcss.config.mjs
+│   │   ├── middleware.ts                # Auth, redirects
+│   │   ├── public/
+│   │   │   ├── favicon.ico
+│   │   │   ├── logo.svg
+│   │   │   ├── robots.txt
+│   │   │   └── manifest.json
+│   │   └── src/
+│   │       ├── app/                     # Next.js App Router
+│   │       │   ├── layout.tsx
+│   │       │   ├── page.tsx             # Landing / redirect to /chat
+│   │       │   ├── globals.css
+│   │       │   ├── (auth)/
+│   │       │   │   ├── login/
+│   │       │   │   │   └── page.tsx
+│   │       │   │   ├── signup/
+│   │       │   │   │   └── page.tsx
+│   │       │   │   └── layout.tsx
+│   │       │   ├── (app)/
+│   │       │   │   ├── layout.tsx       # Authenticated shell
+│   │       │   │   ├── chat/
+│   │       │   │   │   ├── page.tsx     # New conversation
+│   │       │   │   │   └── [id]/
+│   │       │   │   │       └── page.tsx # Existing conversation
+│   │       │   │   ├── projects/
+│   │       │   │   │   ├── page.tsx
+│   │       │   │   │   └── [id]/
+│   │       │   │   │       └── page.tsx
+│   │       │   │   ├── settings/
+│   │       │   │   │   ├── page.tsx
+│   │       │   │   │   ├── account/
+│   │       │   │   │   │   └── page.tsx
+│   │       │   │   │   ├── privacy/
+│   │       │   │   │   │   └── page.tsx
+│   │       │   │   │   └── appearance/
+│   │       │   │   │       └── page.tsx
+│   │       │   │   └── admin/           # Internal admin (role-gated)
+│   │       │   │       └── page.tsx
+│   │       │   └── api/                 # Next.js API routes (thin proxies)
+│   │       │       ├── auth/
+│   │       │       │   ├── [...nextauth]/
+│   │       │       │   │   └── route.ts
+│   │       │       │   └── session/
+│   │       │       │       └── route.ts
+│   │       │       ├── conversations/
+│   │       │       │   └── route.ts
+│   │       │       └── messages/
+│   │       │           └── route.ts     # SSE streaming proxy
+│   │       ├── components/
+│   │       │   ├── ui/                  # Primitive components (Radix-based)
+│   │       │   │   ├── button.tsx
+│   │       │   │   ├── input.tsx
+│   │       │   │   ├── dialog.tsx
+│   │       │   │   ├── dropdown-menu.tsx
+│   │       │   │   ├── tooltip.tsx
+│   │       │   │   ├── scroll-area.tsx
+│   │       │   │   ├── separator.tsx
+│   │       │   │   └── skeleton.tsx
+│   │       │   ├── chat/
+│   │       │   │   ├── ChatWindow.tsx
+│   │       │   │   ├── MessageList.tsx
+│   │       │   │   ├── MessageBubble.tsx
+│   │       │   │   ├── AssistantMessage.tsx
+│   │       │   │   ├── UserMessage.tsx
+│   │       │   │   ├── ComposerBar.tsx
+│   │       │   │   ├── ComposerTextarea.tsx
+│   │       │   │   ├── AttachmentPicker.tsx
+│   │       │   │   ├── ToolCallDisplay.tsx
+│   │       │   │   ├── ToolResultDisplay.tsx
+│   │       │   │   ├── ThinkingIndicator.tsx
+│   │       │   │   └── StopButton.tsx
+│   │       │   ├── artifacts/
+│   │       │   │   ├── ArtifactContainer.tsx
+│   │       │   │   ├── ArtifactSandbox.tsx  # Sandboxed iframe
+│   │       │   │   ├── ArtifactToolbar.tsx
+│   │       │   │   ├── CodeArtifact.tsx
+│   │       │   │   ├── HtmlArtifact.tsx
+│   │       │   │   ├── ReactArtifact.tsx
+│   │       │   │   ├── SvgArtifact.tsx
+│   │       │   │   └── MermaidArtifact.tsx
+│   │       │   ├── markdown/
+│   │       │   │   ├── MarkdownRenderer.tsx
+│   │       │   │   ├── CodeBlock.tsx
+│   │       │   │   ├── MathBlock.tsx        # KaTeX
+│   │       │   │   └── Citation.tsx
+│   │       │   ├── sidebar/
+│   │       │   │   ├── Sidebar.tsx
+│   │       │   │   ├── ConversationList.tsx
+│   │       │   │   ├── ProjectList.tsx
+│   │       │   │   └── SidebarHeader.tsx
+│   │       │   ├── memory/
+│   │       │   │   ├── MemoryPanel.tsx
+│   │       │   │   └── MemoryItem.tsx
+│   │       │   ├── tools/
+│   │       │   │   ├── ToolToggle.tsx
+│   │       │   │   └── McpConnector.tsx
+│   │       │   └── layout/
+│   │       │       ├── Header.tsx
+│   │       │       ├── Shell.tsx
+│   │       │       └── MobileNav.tsx
+│   │       ├── hooks/
+│   │       │   ├── useChat.ts
+│   │       │   ├── useStream.ts          # SSE streaming hook
+│   │       │   ├── useConversations.ts
+│   │       │   ├── useMemory.ts
+│   │       │   ├── useArtifact.ts
+│   │       │   └── useAuth.ts
+│   │       ├── lib/
+│   │       │   ├── api.ts               # API client
+│   │       │   ├── stream-parser.ts     # SSE event parsing
+│   │       │   ├── auth.ts
+│   │       │   ├── analytics.ts
+│   │       │   └── constants.ts
+│   │       ├── stores/
+│   │       │   ├── conversation.ts      # Zustand store
+│   │       │   ├── ui.ts
+│   │       │   └── user.ts
+│   │       └── types/
+│   │           ├── api.ts
+│   │           ├── conversation.ts
+│   │           └── artifact.ts
+│   │
+│   └── desktop/                         # Electron desktop wrapper
+│       ├── package.json
+│       ├── tsconfig.json
+│       ├── electron-builder.yaml
+│       ├── src/
+│       │   ├── main/
+│       │   │   ├── index.ts             # Electron main process
+│       │   │   ├── updater.ts
+│       │   │   └── tray.ts
+│       │   └── preload/
+│       │       └── index.ts
+│       └── resources/
+│           ├── icon.icns
+│           ├── icon.ico
+│           └── icon.png
+│
+├── packages/
+│   ├── design-system/                   # Shared component library
+│   │   ├── package.json
+│   │   ├── tsconfig.json
+│   │   ├── src/
+│   │   │   ├── index.ts
+│   │   │   ├── tokens/
+│   │   │   │   ├── colors.ts
+│   │   │   │   ├── typography.ts
+│   │   │   │   └── spacing.ts
+│   │   │   └── components/
+│   │   └── stories/                     # Storybook
+│   │       └── ...
+│   ├── api-client/                      # Typed API client
+│   │   ├── package.json
+│   │   ├── tsconfig.json
+│   │   └── src/
+│   │       ├── index.ts
+│   │       ├── client.ts
+│   │       └── types.ts
+│   └── tsconfig/
+│       ├── package.json
+│       ├── base.json
+│       └── nextjs.json
+│
+├── tests/
+│   ├── e2e/                             # Playwright tests
+│   │   ├── playwright.config.ts
+│   │   ├── fixtures/
+│   │   ├── auth.setup.ts
+│   │   └── specs/
+│   │       ├── chat.spec.ts
+│   │       ├── artifacts.spec.ts
+│   │       └── settings.spec.ts
+│   └── a11y/
+│       └── axe.spec.ts
+│
+├── infra/
+│   ├── Dockerfile
+│   └── nginx.conf
+│
+└── docs/
+    ├── architecture.md
+    ├── component-guide.md
+    └── deployment.md
+```
+
+---
+
+## 7. `evals` — [PRIVATE — INTERNAL: QUALITY]
+> Evaluation harnesses, benchmark runners, regression tracking,
+> A/B experiment evaluation, human feedback tooling.
+> Languages: Python.
+
+```
+evals/
+├── .github/
+│   ├── workflows/
+│   │   ├── nightly-evals.yml
+│   │   ├── pr-evals.yml                 # Lightweight evals on PR
+│   │   └── regression-alert.yml
+│   ├── CODEOWNERS
+│   └── pull_request_template.md
+├── .gitignore
+├── .pre-commit-config.yaml
+├── .python-version
+├── .env.example
+├── README.md
+├── PROPRIETARY
+├── pyproject.toml
+├── uv.lock
+├── Makefile
+│
+├── src/
+│   ├── __init__.py
+│   ├── runner/
+│   │   ├── __init__.py
+│   │   ├── eval_runner.py               # Main eval orchestrator
+│   │   ├── parallel_runner.py           # Ray-based parallel execution
+│   │   ├── sampling.py                  # Sampling from model API
+│   │   └── cache.py                     # Cache API responses
+│   ├── benchmarks/
+│   │   ├── __init__.py
+│   │   ├── base.py                      # Abstract benchmark class
+│   │   ├── capability/
+│   │   │   ├── mmlu.py
+│   │   │   ├── humaneval.py
+│   │   │   ├── mbpp.py
+│   │   │   ├── gsm8k.py
+│   │   │   ├── math.py
+│   │   │   ├── gpqa.py
+│   │   │   ├── swe_bench.py
+│   │   │   └── agentic/
+│   │   │       ├── tool_use.py
+│   │   │       └── multi_step.py
+│   │   └── safety/
+│   │       ├── harmlessness.py
+│   │       ├── honesty.py
+│   │       ├── bias.py
+│   │       └── jailbreak_resistance.py
+│   ├── metrics/
+│   │   ├── __init__.py
+│   │   ├── exact_match.py
+│   │   ├── pass_at_k.py
+│   │   ├── llm_judge.py                 # LLM-as-judge scoring
+│   │   ├── human_agreement.py
+│   │   └── calibration.py
+│   ├── tracking/
+│   │   ├── __init__.py
+│   │   ├── results_store.py             # PostgreSQL result storage
+│   │   ├── regression_detector.py
+│   │   └── reporter.py                  # Slack/email alerts
+│   └── utils/
+│       ├── __init__.py
+│       ├── api_client.py
+│       └── logging.py
+│
+├── configs/
+│   ├── nightly.yaml
+│   ├── pr-gate.yaml
+│   └── benchmarks/
+│       ├── capability.yaml
+│       └── safety.yaml
+│
+├── data/
+│   ├── README.md
+│   └── .gitignore                       # Benchmark data not in VCS
+│
+├── notebooks/
+│   ├── results_analysis.ipynb
+│   └── regression_investigation.ipynb
+│
+└── tests/
+    ├── conftest.py
+    └── unit/
+        ├── test_runner.py
+        └── test_metrics.py
+```
+
+---
+
+## 8. `internal-tooling` — [PRIVATE — INTERNAL: INFRA]
+> Internal dashboards, developer tooling, incident management,
+> usage analytics, A/B experimentation framework.
+> Languages: Python, TypeScript.
+
+```
+internal-tooling/
+├── .github/
+│   ├── workflows/
+│   │   ├── ci.yml
+│   │   └── deploy.yml
+│   ├── CODEOWNERS
+│   └── pull_request_template.md
+├── .gitignore
+├── .env.example
+├── README.md
+├── PROPRIETARY
+├── package.json
+├── pnpm-lock.yaml
+├── pyproject.toml
+├── uv.lock
+├── Makefile
+│
+├── apps/
+│   ├── internal-dashboard/              # TypeScript/Next.js internal admin UI
+│   │   ├── package.json
+│   │   ├── tsconfig.json
+│   │   ├── next.config.ts
+│   │   └── src/
+│   │       ├── app/
+│   │       │   ├── layout.tsx
+│   │       │   ├── page.tsx
+│   │       │   ├── usage/
+│   │       │   │   └── page.tsx
+│   │       │   ├── operators/
+│   │       │   │   └── page.tsx
+│   │       │   ├── evals/
+│   │       │   │   └── page.tsx
+│   │       │   ├── incidents/
+│   │       │   │   └── page.tsx
+│   │       │   └── experiments/
+│   │       │       └── page.tsx
+│   │       └── components/
+│   │
+│   └── experiment-service/              # Python A/B experimentation service
+│       ├── pyproject.toml
+│       └── src/
+│           ├── __init__.py
+│           ├── main.py
+│           ├── experiments/
+│           │   ├── __init__.py
+│           │   ├── assignment.py        # User → experiment assignment
+│           │   ├── exposure.py          # Exposure logging
+│           │   └── analysis.py
+│           └── models/
+│               └── experiment.py
+│
+├── packages/
+│   ├── analytics-client/                # Shared analytics TypeScript client
+│   └── feature-flags/                   # Feature flag TypeScript client
+│
+└── scripts/
+    ├── backfill_usage.py
+    ├── export_metrics.py
+    └── incident_report.py
+```
+
+---
+
+## 9. `security` — [PRIVATE — RESTRICTED: SECURITY]
+> Security tooling, vulnerability tracking, pen test artifacts,
+> secrets management tooling, threat modeling.
+> Languages: Python, Go.
+
+```
+security/
+├── .github/
+│   ├── workflows/
+│   │   ├── dependency-scan.yml          # Daily cargo-audit, pip-audit
+│   │   ├── container-scan.yml           # Trivy nightly
+│   │   └── sast.yml                     # Semgrep
+│   ├── CODEOWNERS                       # Security team only
+│   └── SECURITY.md
+├── .gitignore
+├── .env.example
+├── README.md
+├── PROPRIETARY
+├── pyproject.toml
+├── uv.lock
+├── go.mod
+├── go.sum
+├── Makefile
+│
+├── src/
+│   ├── python/
+│   │   ├── secret_scanner/              # Pre-commit secret detection
+│   │   ├── dep_auditor/                 # Dependency vulnerability auditing
+│   │   └── threat_model/               # Threat modeling automation
+│   └── go/
+│       └── vault_sync/                  # HashiCorp Vault secret sync tooling
+│
+├── threat-models/
+│   ├── api-gateway.md
+│   ├── memory-service.md
+│   └── mcp-proxy.md
+│
+├── pen-tests/
+│   ├── README.md
+│   └── .gitignore                       # Reports excluded from VCS
+│
+└── policies/
+    ├── incident-response.md
+    ├── access-control.md
+    └── data-classification.md
+```
+
+---
+
+## 10. `aic-sdk-python` — [PUBLIC]
+
+```
+aic-sdk-python/
+├── .github/
+│   ├── workflows/
+│   │   ├── publish.yml
+│   │   ├── ci.yml
+│   │   └── release-please.yml
+│   ├── CODEOWNERS
+│   ├── pull_request_template.md
+│   └── ISSUE_TEMPLATE/
+│       ├── bug_report.md
+│       └── feature_request.md
+├── .gitignore
+├── .pre-commit-config.yaml
+├── .python-version
+├── README.md
+├── CHANGELOG.md
+├── LICENSE                              # MIT
+├── CONTRIBUTING.md
+├── pyproject.toml
+├── uv.lock
+├── Makefile
+│
+├── src/
+│   └── aic/
+│       ├── __init__.py
+│       ├── _client.py                   # aic class
+│       ├── _async_client.py
+│       ├── _base_client.py
+│       ├── _streaming.py
+│       ├── _exceptions.py
+│       ├── _files.py
+│       ├── _models.py
+│       ├── _response.py
+│       ├── _utils/
+│       │   ├── __init__.py
+│       │   ├── _headers.py
+│       │   └── _retry.py
+│       ├── resources/
+│       │   ├── __init__.py
+│       │   ├── messages/
+│       │   │   ├── __init__.py
+│       │   │   └── messages.py
+│       │   ├── models.py
+│       │   └── batches/
+│       │       ├── __init__.py
+│       │       └── batches.py
+│       └── types/
+│           ├── __init__.py
+│           ├── message.py
+│           ├── message_param.py
+│           ├── model.py
+│           └── shared/
+│               └── __init__.py
+│
+├── examples/
+│   ├── basic_usage.py
+│   ├── streaming.py
+│   ├── tool_use.py
+│   └── async_usage.py
+│
+└── tests/
+    ├── conftest.py
+    ├── api_resources/
+    │   ├── test_messages.py
+    │   └── test_batches.py
+    └── test_streaming.py
+```
+
+---
+
+## 11. `aic-sdk-typescript` — [PUBLIC]
+
+```
+aic-sdk-typescript/
+├── .github/
+│   ├── workflows/
+│   │   ├── publish.yml
+│   │   ├── ci.yml
+│   │   └── release-please.yml
+│   ├── CODEOWNERS
+│   └── pull_request_template.md
+├── .gitignore
+├── .editorconfig
+├── .nvmrc
+├── .node-version
+├── README.md
+├── CHANGELOG.md
+├── LICENSE
+├── CONTRIBUTING.md
+├── package.json
+├── pnpm-lock.yaml
+├── tsconfig.json
+├── tsconfig.build.json
+├── biome.json
+├── vitest.config.ts
+├── build.config.ts
+│
+├── src/
+│   ├── index.ts
+│   ├── client.ts
+│   ├── async-client.ts
+│   ├── core.ts
+│   ├── error.ts
+│   ├── streaming.ts
+│   ├── uploads.ts
+│   ├── pagination.ts
+│   ├── resource.ts
+│   ├── resources/
+│   │   ├── index.ts
+│   │   ├── messages/
+│   │   │   ├── index.ts
+│   │   │   └── messages.ts
+│   │   ├── models.ts
+│   │   └── batches/
+│   │       ├── index.ts
+│   │       └── batches.ts
+│   └── types/
+│       ├── index.ts
+│       └── shared.ts
+│
+├── examples/
+│   ├── basic_usage.ts
+│   ├── streaming.ts
+│   └── tool_use.ts
+│
+└── tests/
+    ├── api-resources/
+    │   └── messages.test.ts
+    └── streaming.test.ts
+```
+
+---
+
+## 12. `aic-sdk-go` — [PUBLIC]
+
+```
+aic-sdk-go/
+├── .github/
+│   ├── workflows/
+│   │   ├── ci.yml
+│   │   └── publish.yml
+│   └── pull_request_template.md
+├── .gitignore
+├── README.md
+├── CHANGELOG.md
+├── LICENSE
+├── go.mod
+├── go.sum
+│
+├── aic.go                         # Package entry point
+├── client.go
+├── messages.go
+├── models.go
+├── streaming.go
+├── errors.go
+├── pagination.go
+├── options.go
+├── internal/
+│   ├── apijson/
+│   └── apiquery/
+├── examples/
+│   ├── basic_usage/
+│   │   └── main.go
+│   └── streaming/
+│       └── main.go
+└── messages_test.go
+```
+
+---
+
+## 13. `model-spec` — [PUBLIC]
+
+```
+model-spec/
+├── .github/
+│   ├── workflows/
+│   │   └── validate.yml
+│   └── pull_request_template.md
+├── .gitignore
+├── README.md
+├── LICENSE                              # CC BY 4.0
+├── CHANGELOG.md
+│
+├── model-spec.md                        # The spec itself
+├── supplementary/
+│   ├── operator-guidelines.md
+│   ├── usage-policy.md
+│   └── safety-philosophy.md
+└── docs/
+    ├── faq.md
+    └── revision-history.md
+```
+
+---
+
+## 14. `mcp` — [PUBLIC]
+> Model Context Protocol specification, reference implementations, SDKs.
+
+```
+mcp/
+├── .github/
+│   ├── workflows/
+│   │   ├── ci.yml
+│   │   ├── publish-spec.yml
+│   │   └── sdk-tests.yml
+│   └── pull_request_template.md
+├── .gitignore
+├── README.md
+├── LICENSE                              # MIT
+├── CHANGELOG.md
+├── package.json
+├── pnpm-lock.yaml
+├── pnpm-workspace.yaml
+│
+├── spec/                                # Protocol specification
+│   ├── README.md
+│   ├── overview.md
+│   ├── transports.md
+│   ├── lifecycle.md
+│   ├── server-features/
+│   │   ├── tools.md
+│   │   ├── resources.md
+│   │   └── prompts.md
+│   ├── client-features/
+│   │   └── sampling.md
+│   └── schema/
+│       ├── schema.json                  # JSON Schema
+│       └── schema.ts                    # TypeScript types
+│
+├── sdk/
+│   ├── typescript/                      # @modelcontextprotocol/sdk
+│   │   ├── package.json
+│   │   ├── tsconfig.json
+│   │   ├── src/
+│   │   │   ├── index.ts
+│   │   │   ├── client/
+│   │   │   │   ├── index.ts
+│   │   │   │   └── sse.ts
+│   │   │   ├── server/
+│   │   │   │   ├── index.ts
+│   │   │   │   └── sse.ts
+│   │   │   ├── types.ts
+│   │   │   └── protocol.ts
+│   │   └── tests/
+│   │       └── server.test.ts
+│   └── python/                          # mcp python package
+│       ├── pyproject.toml
+│       └── src/
+│           └── mcp/
+│               ├── __init__.py
+│               ├── server/
+│               │   ├── __init__.py
+│               │   ├── fastmcp.py
+│               │   └── stdio.py
+│               ├── client/
+│               │   ├── __init__.py
+│               │   └── sse.py
+│               └── types.py
+│
+├── examples/
+│   ├── servers/
+│   │   ├── filesystem/
+│   │   ├── github/
+│   │   └── sqlite/
+│   └── clients/
+│       └── simple-client/
+│
+└── docs/
+    ├── quickstart.md
+    ├── building-servers.md
+    └── building-clients.md
+```
+
+---
+
+## 15. `aic-quickstarts` — [PUBLIC]
+
+```
+aic-quickstarts/
+├── .github/
+│   ├── workflows/
+│   │   └── ci.yml
+│   └── pull_request_template.md
+├── .gitignore
+├── README.md
+├── LICENSE
+│
+├── computer-use-demo/
+│   ├── README.md
+│   ├── pyproject.toml
+│   ├── Dockerfile
+│   └── src/
+│       └── ...
+├── customer-support-agent/
+│   ├── README.md
+│   ├── package.json
+│   └── src/
+│       └── ...
+├── tool-use-visualizer/
+│   ├── README.md
+│   └── src/
+│       └── ...
+└── multimodal-demo/
+    ├── README.md
+    └── src/
+        └── ...
+```
+
+---
+
+## Cross-Cutting Notes
+
+### Secrets & Configuration Strategy
+Every service follows a strict hierarchy:
+```
+.env.example          → committed (safe defaults, no secrets)
+.env.local            → gitignored, for local dev
+.env.staging          → never committed; injected by CI from Vault
+.env.production       → never committed; injected by CD from Vault
+```
+HashiCorp Vault is the assumed secrets backend in production. Kubernetes secrets are populated via the Vault Agent Injector, not baked into manifests.
+
+### Dependency Pinning Strategy
+| Ecosystem | Pin method |
+|---|---|
+| Python | `uv.lock` (exact) |
+| Rust | `Cargo.lock` (exact, committed) |
+| TypeScript | `pnpm-lock.yaml` (exact) |
+| Go | `go.sum` (hash-verified) |
+| Docker base images | SHA256 digest pinned in Dockerfiles |
+
+### Inter-Service Communication
+- **Synchronous**: gRPC (protobuf) between all internal services
+- **Streaming**: gRPC streaming from inference-engine → api-gateway, then SSE to client
+- **Async**: Internal event bus (likely Kafka or AWS Kinesis) for memory extraction, analytics, audit logging
+
+### Observability Stack
+- **Traces**: OpenTelemetry → Jaeger / AWS X-Ray
+- **Metrics**: Prometheus → Grafana
+- **Logs**: Structured JSON → Loki / CloudWatch
+- **Errors**: Sentry for both Python and TypeScript services
+
+### CI/CD Gate Model
+```
+PR → lint + typecheck + unit tests        (~2 min)
+     ↓
+Merge → integration tests + eval gate    (~15 min)
+     ↓
+Staging deploy → E2E tests               (~30 min)
+     ↓
+Production deploy (manual approval)
+```

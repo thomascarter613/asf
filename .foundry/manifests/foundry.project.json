@@ -1,0 +1,83 @@
+{
+  "schemaVersion": "0.1.0",
+  "projectId": "agentic-software-foundry",
+  "projectName": "Agentic Software Foundry",
+  "status": "pre-mvp",
+  "profile": "governance-grade",
+  "description": "A repo-canonical, vector-assisted, policy-gated, model-agnostic system for generating, executing, verifying, documenting, remembering, and resuming serious software work with AI.",
+  "subsystems": {
+    "foundryControlPlane": true,
+    "charon": true,
+    "aiSdlcFramework": true,
+    "monorepoFactory": true,
+    "eventBus": true,
+    "notificationRouter": true,
+    "multiAgentRuntime": true,
+    "vectorRetrieval": true,
+    "worktreeExecution": true,
+    "evaluationHarness": true
+  },
+  "defaults": {
+    "autonomyMode": "safe-by-default",
+    "localFirst": true,
+    "verificationRequired": true,
+    "canonicalMemoryRequiresAdmission": true,
+    "externalNotificationsEnabled": false,
+    "automaticRemotePush": false,
+    "automaticMerge": false
+  },
+  "forbidden": {
+    "tools": [
+      "bazel"
+    ],
+    "behaviors": [
+      "silent-canonical-memory-promotion",
+      "unreviewed-destructive-file-change",
+      "automatic-remote-push",
+      "automatic-merge",
+      "external-notification-without-policy",
+      "leaked-code-ingestion",
+      "orphan-vector-memory",
+      "provider-lock-in-as-architecture"
+    ]
+  },
+  "policies": {
+    "charter": "docs/foundry/00-foundry-charter.md",
+    "systemBoundaries": "docs/foundry/01-system-boundaries.md",
+    "v1MvpDefinition": "docs/foundry/02-v1-mvp-definition.md",
+    "frontmatterStandard": "docs/foundry/03-document-versioning-and-frontmatter.md",
+    "cleanRoom": "governance/CLEAN_ROOM_POLICY.md",
+    "constitution": "governance/PROJECT_CONSTITUTION.md"
+  },
+  "adrs": {
+    "directory": "docs/adr",
+    "initialSet": [
+      "ADR-0001",
+      "ADR-0002",
+      "ADR-0003",
+      "ADR-0004",
+      "ADR-0005",
+      "ADR-0006",
+      "ADR-0007",
+      "ADR-0008",
+      "ADR-0009",
+      "ADR-0010",
+      "ADR-0011",
+      "ADR-0012",
+      "ADR-0013",
+      "ADR-0014"
+    ]
+  },
+  "controlPlane": {
+    "eventLog": ".foundry/events/events.jsonl",
+    "routes": ".foundry/router/routes.json",
+    "latestStatus": ".foundry/state/latest-status.md",
+    "runsDirectory": ".foundry/runs"
+  },
+  "notes": [
+    "This manifest contains no secrets.",
+    "This manifest encodes safe defaults for v1.0.",
+    "The repository remains the canonical source of truth.",
+    "Vector retrieval is a derived index, not authoritative memory."
+  ]
+}

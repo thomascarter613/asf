@@ -1,0 +1,21 @@
+{
+    "schemaVersion": "0.1.0",
+    "status": "planned",
+    "description": "Manifest for repository artifacts eligible for future Charon indexing.",
+    "sources": [],
+    "exclusions": [
+        ".git/",
+        "node_modules/",
+        ".env",
+        ".env.*",
+        "dist/",
+        "build/",
+        "coverage/"
+    ],
+    "rules": [
+        "Do not index secrets.",
+        "Do not index forbidden material.",
+        "Every indexed source must have a repository path.",
+        "Every vector entry must be traceable to a repository artifact."
+    ]
+}

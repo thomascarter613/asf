@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "0.1.0",
+  "contractId": "agentic-software-foundry-repo-contract",
+  "contractName": "Agentic Software Foundry Repository Contract",
+  "status": "active",
+  "description": "Initial repository contract definitions for the Agentic Software Foundry v1.0 scaffold.",
+  "contractFiles": {
+    "requiredPaths": "evals/repo-contracts/required-paths.json",
+    "forbiddenPaths": "evals/repo-contracts/forbidden-paths.json",
+    "requiredManifestFields": "evals/repo-contracts/required-manifest-fields.json"
+  },
+  "checker": {
+    "path": "evals/repo-contracts/check-repo-contracts.py",
+    "runtime": "python3",
+    "usesExternalDependencies": false,
+    "command": "python evals/repo-contracts/check-repo-contracts.py"
+  },
+  "sources": [
+    "docs/foundry/00-foundry-charter.md",
+    "docs/foundry/01-system-boundaries.md",
+    "docs/foundry/02-v1-mvp-definition.md",
+    "docs/foundry/03-document-versioning-and-frontmatter.md",
+    "governance/PROJECT_CONSTITUTION.md",
+    "governance/CLEAN_ROOM_POLICY.md",
+    "docs/adr/ADR-0010-manifest-driven-project-contracts.md",
+    "docs/adr/ADR-0013-repo-contract-testing.md",
+    "docs/adr/ADR-0014-evaluation-harness-for-context-continuity-and-agent-execution.md"
+  ],
+  "readiness": {
+    "definition": "documented",
+    "checker": "scripted",
+    "ci": "not-implemented"
+  },
+  "rules": [
+    "Required paths must exist.",
+    "Forbidden paths must not exist.",
+    "The project manifest must parse as JSON.",
+    "The project manifest must contain required fields.",
+    "Safe defaults must remain disabled unless explicitly amended.",
+    "Bazel configuration files are forbidden by default.",
+    "Markdown frontmatter is required for meaningful Markdown documents."
+  ]
+}

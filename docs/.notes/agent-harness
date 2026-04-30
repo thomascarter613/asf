@@ -1,0 +1,2317 @@
+>_ claw-code
+Architecture
+Tools
+Commands
+Rust Runtime
+Getting Started
+GitHub
+English
+Home› Architecture
+Architecture
+Claw Code Architecture: Dual-Layer Agent Harness Design
+A comprehensive look at how claw-code orchestrates AI coding agents through 60+ Python modules and 6 Rust crates — from bootstrap to streaming query execution.
+
+Documentation
+Architecture
+Tool System
+Commands
+Rust Runtime
+Query Engine
+Sessions
+Permissions
+MCP Integration
+API Client
+Resources
+Getting Started
+Comparison
+Leak Timeline
+Architecture Overview
+The claw code architecture follows a dual-layer design: a Python orchestration layer that manages agent sessions, command routing, and LLM interaction, paired with a Rust performance layer that handles API communication, tool execution, terminal rendering, and security. This separation keeps the high-level agent logic expressive and easy to modify while pushing latency-sensitive operations into compiled, memory-safe code.
+
+At the highest level, every user interaction flows through three stages: bootstrap (environment discovery, configuration loading, mode routing), query engine execution (turn loops with tool-calling and message compaction), and response rendering (streaming markdown with syntax highlighting in the terminal). Each stage is backed by well-defined modules in both layers.
+
+ User Terminal (REPL / stdin)
+       |
+       v
+ +------------------------------------------+
+ |          Rust CLI Binary                  |
+ |  rusty-claude-cli  (crossterm, syntect,   |
+ |  pulldown_cmark, braille spinner)         |
+ +------------------------------------------+
+       |
+       v
+ +------------------------------------------+
+ |         Python Orchestration Layer        |
+ |  bootstrap_graph.py  (7 stages)          |
+ |  runtime.py  (route_prompt, run_turn)    |
+ |  query_engine.py  (max_turns=8, stream)  |
+ |  commands.py  |  tools.py  |  models.py  |
+ |  context.py   |  session_store.py        |
+ |  transcript.py | execution_registry.py   |
+ |  tool_pool.py  | parity_audit.py         |
+ |  + 50 more modules                       |
+ +------------------------------------------+
+       |              |              |
+       v              v              v
+ +-----------+  +-----------+  +-----------+
+ | Rust api  |  | Rust      |  | Rust      |
+ | crate     |  | runtime   |  | tools     |
+ | Anthropic |  | 16 modules|  | 19 specs  |
+ | client,   |  | bash,file |  | JSON      |
+ | SSE,OAuth |  | ops,mcp,  |  | schemas   |
+ | retry     |  | oauth,    |  |           |
+ |           |  | session,  |  |           |
+ |           |  | prompt,   |  |           |
+ |           |  | usage     |  |           |
+ +-----------+  +-----------+  +-----------+
+       |              |
+       v              v
+ +-----------+  +---------------+
+ | Rust      |  | Rust          |
+ | commands  |  | compat-       |
+ | 15 slash  |  | harness       |
+ | commands  |  | (bridge       |
+ |           |  |  layer)       |
+ +-----------+  +---------------+
+       |
+       v
+   Anthropic API  (api.anthropic.com)
+Python Orchestration Layer (src/)
+The Python workspace contains 60+ modules organized into tightly scoped subsystems. Each module owns a single responsibility, making the codebase easy to navigate and test in isolation. Below is a detailed breakdown of every major subsystem.
+
+Bootstrap Graph — bootstrap_graph.py
+The bootstrap sequence is the entry point for every claw-code session. It runs through 7 sequential stages, each one gated on the previous stage completing successfully:
+
+Prefetch — Pre-loads reference data and warms caches before anything else runs.
+Warning handler — Attaches global warning filters so noisy deprecation messages from third-party libraries do not leak into the user terminal.
+CLI parser — Parses command-line arguments and flags, establishing the execution mode early.
+Setup + Commands parallel load — Runs environment setup and command snapshot loading concurrently for faster startup.
+Deferred init — Initializes components that depend on the parsed CLI state and loaded configuration.
+Mode routing — Routes execution to one of six modes: local, remote, ssh, teleport, direct-connect, or deep-link.
+Query engine submit loop — Hands control to the query engine for the interactive turn loop.
+Query Engine — query_engine.py
+The query engine is the central orchestration hub. It manages the conversation loop between the user, the LLM, and the tool system. Key configuration values are defined in the QueryEngineConfig dataclass:
+
+max_turns = 8 — The maximum number of LLM round-trips per user query before the engine halts.
+max_budget_tokens = 2000 — Token budget cap for a single query session.
+compact_after_turns = 12 — After this many accumulated turns, the transcript is compacted to free context window space.
+Each turn produces a TurnResult, and the QueryEnginePort class exposes session management, message compaction, and streaming. The streaming interface yields six distinct event types: message_start, command_match, tool_match, permission_denial, message_delta, and message_stop. This event-driven design allows the terminal renderer to paint output incrementally as tokens arrive.
+
+Runtime — runtime.py
+The runtime module bridges raw user input and the query engine. It provides PortRuntime, which exposes two critical methods:
+
+route_prompt — Tokenizes user input and scores it against available commands and tools, producing RoutedMatch objects (each with a kind, name, source_hint, and score).
+bootstrap_session / run_turn_loop — Initializes a new agent session and enters the main execution loop.
+Commands — commands.py
+The command inventory loads from reference_data/commands_snapshot.json at startup. It exposes the CommandExecution dataclass with five fields: name, source_hint, prompt, handled, and message. Four public functions provide the command API:
+
+load_command_snapshot() — Reads and parses the JSON snapshot file.
+get_command(name) — Returns a single command definition by name.
+find_commands(query) — Fuzzy-searches commands matching a query string.
+execute_command(cmd) — Dispatches a command for execution.
+Tools — tools.py
+The tool inventory mirrors the command system but for tool-calling. It loads from reference_data/tools_snapshot.json and defines a ToolExecution dataclass. Key functions include:
+
+load_tool_snapshot() — Cached with lru_cache for zero-cost repeated access.
+build_tool_backlog() — Constructs the list of pending tool operations.
+get_tools(simple_mode) — When simple_mode is enabled, restricts the available tools to only BashTool, FileReadTool, and FileEditTool.
+filter_tools_by_permission_context() — Applies permission filtering based on the current session context.
+Core Data Models — models.py
+The models.py module defines the shared data types that flow through every layer of the system:
+
+Dataclass   Fields  Purpose
+Subsystem   name, path, file_count, notes   Represents a discovered subsystem in the workspace
+PortingModule   name, responsibility, source_hint, status   Tracks porting progress for a single module
+PermissionDenial    —   Records when a tool call is blocked by permissions
+UsageSummary    input_tokens, output_tokens (word-count proxy)  Token usage tracking for cost management
+PortingBacklog  —   Aggregates all pending porting work
+Supporting Python Modules
+Beyond the core subsystems, the Python layer includes dozens of focused modules:
+
+context.py — Workspace discovery via PortContext, which locates source_root, tests_root, assets_root, archive_root, and counts Python files.
+session_store.py — JSON-based session persistence stored in the .port_sessions/ directory.
+transcript.py — In-memory conversation transcript with a compaction strategy that keeps the last 10 messages (keep_last=10).
+execution_registry.py — Unified registry exposing MirroredCommand and MirroredTool types that bridge the Python and Rust execution models.
+tool_pool.py — Filtered tool assembly via the ToolPool class, which caps visible tools at 15 to avoid overwhelming the LLM context.
+parity_audit.py — Compares the Python and TypeScript implementations: 18 root file mappings and 31 directory mappings to track porting completeness.
+cost_tracker.py — Accumulates token usage and dollar costs across turns.
+history.py — Session history storage and retrieval.
+ink.py — Markdown panel rendering for rich terminal output.
+permissions.py — Permission checks and policy enforcement.
+prefetch.py — Data prefetching for faster bootstrap.
+remote_runtime.py — Handles remote execution modes.
+direct_modes.py — Direct-connect and deep-link mode handling.
+command_graph.py — Command dependency graph resolution.
+query.py — Lower-level query construction helpers.
+deferred_init.py — Lazy initialization for heavy components.
+Rust Performance Layer (rust/)
+The Rust workspace is organized as a 6-crate Cargo workspace. Each crate is compiled independently, enabling incremental builds and clear dependency boundaries. Together, they provide the high-performance foundation that the Python layer calls into.
+
+api Crate — Anthropic API Client
+The api crate encapsulates all communication with the Anthropic API. Its AnthropicClient handles authentication, retries, and streaming:
+
+Retry logic — Automatically retries on HTTP status codes 408, 409, 429, 500, 502, 503, and 504.
+Authentication — The AuthSource enum supports four modes: None, ApiKey, BearerToken, and ApiKeyAndBearer.
+Streaming — Server-Sent Events via MessageStream and SseParser for real-time token delivery.
+OAuth — Full token exchange flow for enterprise authentication.
+API Constants
+DEFAULT_BASE_URL = "https://api.anthropic.com" • ANTHROPIC_VERSION = "2023-06-01" • DEFAULT_MAX_RETRIES = 2
+
+runtime Crate — 16 Modules
+The runtime crate is the largest in the Rust workspace with 16 modules covering everything from bash execution to OAuth flows:
+
+bootstrap
+Bootstrap (12 phases)
+From CliEntry to MainRuntime through 12 sequential phases that progressively build the execution environment.
+
+conversation
+ConversationRuntime
+Core turn loop with ApiClient + ToolExecutor traits. Max iterations capped at 16 per conversation round.
+
+compact
+CompactionConfig
+preserve_recent = 4 messages, max_estimated_tokens = 10000. Keeps context window lean without losing critical state.
+
+config
+Configuration (3 sources)
+ConfigSources: User, Project, and Local. Discovers settings.json files at each level with cascading priority.
+
+file_ops
+File Operations
+Read, write, edit, glob, and grep with a 250 head_limit for search results and 100 glob truncation cap.
+
+permissions
+Permission System
+PermissionMode: Allow, Deny, or Prompt. PermissionPolicy supports per-tool permission modes.
+
+prompt
+System Prompt Builder
+MAX_INSTRUCTION_FILE_CHARS = 4000, MAX_TOTAL_INSTRUCTION_CHARS = 12000. Discovers and assembles CLAUDE.md files.
+
+mcp
+MCP Integration
+Name normalization with mcp__{server}__{tool} convention. 6 MCP transport types: Stdio, SSE, HTTP, WebSocket, SDK, and ClaudeAiProxy.
+
+Additional runtime modules include:
+
+bash — Sandboxed shell command execution.
+json — Zero-dependency JSON parser for minimal overhead.
+oauth — Full PKCE authorization code flow, storing credentials at ~/.claude/credentials.json.
+remote — Upstream proxy configuration with DEFAULT_REMOTE_BASE_URL and a list of 16 no-proxy hosts.
+session — MessageRole enum (System, User, Assistant, Tool) and ContentBlock variants (Text, ToolUse, ToolResult).
+sse — Incremental SSE parser for streaming API responses.
+usage — ModelPricing with per-model rates: Sonnet at $15/$75 per million tokens, Haiku at $1/$5, Opus at $15/$75. Includes format_usd for display.
+tools Crate — 19 Tool Specifications
+The tools crate defines 19 tool specifications, each with a full JSON Schema for parameter validation. These schemas are what the LLM sees when deciding which tool to call:
+
+Tool    Category    Description
+bash    Execution   Run shell commands in a sandboxed environment
+read_file   File I/O    Read file contents with offset/limit support
+write_file  File I/O    Write or overwrite file contents
+edit_file   File I/O    Targeted string replacements within files
+glob_search Search  Pattern-based file discovery
+grep_search Search  Regex content search powered by ripgrep
+WebFetch    Network HTTP requests to external URLs
+WebSearch   Network Web search queries
+TodoWrite   Planning    Structured task list management
+Skill   Extension   Invoke registered skill modules
+Agent   Multi-agent Spawn sub-agent for parallel work
+ToolSearch  Discovery   Search for deferred tools by keyword
+NotebookEdit    Notebook    Edit Jupyter notebook cells
+Sleep   Utility Pause execution for a specified duration
+SendUserMessage Communication   Send messages back to the user
+Config  Settings    Read/write configuration values
+StructuredOutput    Output  Return structured JSON responses
+REPL    Execution   Interactive language REPL sessions
+PowerShell  Execution   Windows PowerShell command execution
+commands Crate — 15 Slash Commands
+The commands crate implements the slash command system with 15 built-in commands. Each command is classified by a CommandSource enum: Builtin, InternalOnly, or FeatureGated.
+
+// Available slash commands /help — Show help and available commands /status — Display session status and token usage /compact — Trigger manual transcript compaction /model — Switch the active model /permissions — View or modify tool permissions /clear — Clear the conversation transcript /cost — Show accumulated session costs /resume — Resume a previous session /config — View or edit configuration /memory — Manage CLAUDE.md memory files /init — Initialize a new project workspace /exit — Exit the session /diff — Show git diff of session changes /version — Print version information /export — Export conversation transcript
+rusty-claude-cli — CLI Binary
+The rusty-claude-cli crate is the user-facing binary. It defaults to claude-sonnet-4-20250514 as the model and provides a rich terminal experience:
+
+REPL — Interactive read-eval-print loop with a braille spinner animation (10 frames) for loading states.
+Syntax highlighting — Powered by syntect with the base16-ocean.dark theme.
+Markdown rendering — Uses pulldown_cmark to parse and render markdown directly in the terminal.
+Raw mode line editor — Built on crossterm for cross-platform terminal input handling.
+compat-harness Crate
+The compat-harness crate serves as the compatibility bridge between the Python orchestration layer and the Rust performance layer. It ensures that data structures, function signatures, and calling conventions remain stable across the language boundary.
+
+Data Flow: From Prompt to Response
+Understanding the claw code architecture means tracing how a single user prompt flows through the entire system:
+
+The user types a prompt in the rusty-claude-cli REPL.
+The CLI passes input to the Python layer, where runtime.py tokenizes it and calls route_prompt to determine if it matches a slash command or should go to the LLM.
+If it is a slash command, the commands crate handles it directly. Otherwise, the query engine takes over.
+The query engine constructs the API request — including system prompt (built by the Rust prompt module from discovered CLAUDE.md files), conversation history (managed by transcript.py), and available tools (filtered by tool_pool.py, max 15).
+The Rust api crate sends the request to Anthropic's API with streaming enabled, yielding SSE events back through the Python layer.
+If the LLM response includes a tool call, the Rust runtime crate executes it (bash commands, file operations, etc.), checking permissions via the PermissionPolicy.
+Tool results feed back into the next turn. This loop continues for up to 8 turns (Python query engine) or 16 iterations (Rust conversation runtime).
+When the conversation accumulates more than 12 turns, the transcript is compacted — the Rust compaction module preserves the 4 most recent messages and limits estimated tokens to 10,000.
+Session & Transcript Management
+Claw-code maintains session state through two complementary mechanisms:
+
+session_store.py persists full session data as JSON in the .port_sessions/ directory, enabling the /resume command to restore previous conversations.
+transcript.py keeps an in-memory rolling transcript. Its compaction algorithm retains the last 10 messages (keep_last=10), discarding older content to prevent context window overflow.
+On the Rust side, the session module defines the message schema with MessageRole (System, User, Assistant, Tool) and ContentBlock (Text, ToolUse, ToolResult). This shared schema ensures both layers interpret conversation history identically.
+
+Python-TypeScript Parity Audit
+Since claw-code is a clean-room rewrite of the Claude Code architecture, the parity_audit.py module continuously tracks implementation completeness. It maintains 18 root file mappings and 31 directory mappings that map Python modules to their TypeScript counterparts, making it straightforward to identify gaps and prioritize porting work.
+
+Related Topics
+Tool System Deep Dive
+Explore the 19 tool specifications and how the ToolPool filters them for LLM context.
+Slash Commands Reference
+Complete guide to all 15 slash commands and the CommandSource classification system.
+Rust Runtime Internals
+Deep dive into the 16 Rust runtime modules from bootstrap phases to OAuth flows.
+Getting Started
+Install claw-code and run your first AI-assisted coding session in minutes.
+
+Copy Page
+On This Page
+Architecture Overview
+Python Layer (src/)
+Bootstrap Graph
+Query Engine
+Runtime
+Commands
+Tools
+Core Data Models
+Supporting Modules
+Rust Layer (rust/)
+api Crate
+runtime Crate
+tools Crate
+commands Crate
+CLI Binary
+compat-harness
+Data Flow
+Session Management
+Parity Audit
+>_ claw-code
+Open-source AI coding agent framework.
+Clean-room Python & Rust rewrite of the Claude Code architecture.
+Documentation
+Architecture
+Tool System
+Commands
+Rust Runtime
+Query Engine
+Platform
+Sessions
+Permissions
+MCP Integration
+API Client
+Resources
+Getting Started
+Claw Code vs Claude Code
+Source Leak Timeline
+Language
+English
+简体中文
+繁體中文(港)
+繁體中文(台)
+한국어
+Claw Code is an independent open-source project. Not affiliated with Anthropic.
+Claude Code is a trademark of Anthropic, PBC.
+
+GitHub
+llms.txt
+Sitemap
+
+
+>_ claw-code
+Architecture
+Tools
+Commands
+Rust Core
+Getting Started
+GitHub
+English
+Home› Tool System
+Tool System
+Claw Code Tools: Complete Reference for 19 Built-in AI Agent Tools
+Every tool the Claw Code agent can invoke, documented from source. Covers ToolSpec schemas, input parameters, the Python tool layer, ToolPool assembly, and the permission gating system that controls what the agent is allowed to execute.
+
+Documentation
+Architecture
+Tool System
+Commands
+Rust Runtime
+Query Engine
+Sessions
+Permissions
+MCP Integration
+API Client
+Resources
+Getting Started
+Comparison
+Leak Timeline
+The claw code tools are the primary mechanism through which the AI agent interacts with the developer's environment. Defined in rust/crates/tools/src/lib.rs, each tool is registered as a ToolSpec containing a name, description, and JSON input_schema. At runtime, the agent selects tools based on the task at hand, and the framework validates inputs, checks permissions, executes the tool, and returns structured results. This page documents all 19 built-in tools, the Python orchestration layer, the ToolPool assembly process, and the permission gating architecture.
+
+Tool Architecture Overview
+The claw code tools follow a consistent lifecycle: the LLM emits a tool_use content block specifying a tool name and JSON input, the runtime validates the input against the tool's input_schema, the permission engine checks whether the call is allowed, the tool executes, and the result is returned to the LLM as a tool_result content block. This architecture is split across two layers:
+
+Rust layer (rust/crates/tools/src/lib.rs) — Defines the 19 ToolSpec registrations with JSON schemas and execution logic
+Python layer (src/tools.py, src/tool_pool.py) — Handles tool discovery, filtering, pool assembly, and shim execution for the orchestration layer
+Every tool follows a uniform pattern in the Rust crate: parse the LLM's JSON input, validate required and optional fields against the schema, check permissions via the PermissionEngine, execute the operation, and return a typed result struct. This consistency makes it straightforward to add new tools or modify existing ones without disrupting the rest of the system.
+
+Shell Execution Tools
+1. bash — Shell Command Execution
+The bash tool is the most powerful and most heavily gated tool in the claw code tools suite. It executes arbitrary shell commands in a sandboxed environment, capturing stdout, stderr, and the exit code.
+
+Parameter   Type  Required    Description
+command     string      Yes   The shell command to execute
+timeout     integer     No    Timeout in milliseconds. Maximum 600000 (10 minutes)
+description string      No    Human-readable description of what the command does
+run_in_background boolean     No    Run the command in the background, returning a background_task_id
+dangerously_disable_sandbox   boolean     No    Disable the execution sandbox. Requires explicit permission
+The output is a BashCommandOutput struct containing stdout, stderr, return_code_interpretation, an interrupted flag (set when the command was killed due to timeout), and an optional background_task_id for background commands.
+
+Sandbox Enforcement
+By default, all bash commands run inside a sandbox that restricts file system access, network egress, and process creation. The dangerously_disable_sandbox flag bypasses these restrictions but requires the user to have explicitly granted this permission in their settings.
+
+19. PowerShell — Windows Shell Execution
+The PowerShell tool provides Windows-native shell execution. It accepts two parameters: command (the PowerShell command to execute) and an optional timeout in milliseconds. This is a conditional tool — only available on Windows platforms — and provides the same sandbox enforcement as the bash tool.
+
+File Operation Tools
+2. read_file — File Reading with Offset/Limit
+The read_file tool reads files from the local filesystem with optional offset and limit parameters for efficient partial reads of large files.
+
+Parameter   Type  Required    Description
+file_path   string      Yes   Absolute path to the file to read
+offset      integer     No    Line number to start reading from
+limit integer     No    Number of lines to read
+pages string      No    Page range for PDF files (e.g. "1-5", "3", "10-20")
+The tool supports reading text files, images (PNG, JPG — presented visually to the multimodal LLM), PDF files (with the pages parameter for large documents), and Jupyter notebooks (.ipynb files with all cells and outputs). Output is returned in cat -n format with line numbers starting at 1.
+
+3. write_file — File Creation and Overwrite
+The write_file tool creates new files or overwrites existing ones. It requires an absolute file_path and the full content to write. The output includes both a structured_patch and a git_diff, making it easy to review exactly what changed. This tool is permission-gated — the agent must have write access to the target path.
+
+4. edit_file — String Replacement Editing
+The edit_file tool performs precise string replacement within files. Rather than rewriting entire files, the agent specifies an old_string to find and a new_string to replace it with. This approach minimizes the risk of accidental data loss and produces clean, reviewable diffs.
+
+Parameter   Type  Required    Description
+file_path   string      Yes   Absolute path to the file to edit
+old_string  string      Yes   The exact text to find and replace
+new_string  string      Yes   The replacement text
+replace_all boolean     No    Replace all occurrences (default: false)
+A critical design decision: the edit fails if old_string is not unique within the file (unless replace_all is true). This forces the agent to provide enough surrounding context to unambiguously identify the edit location, preventing accidental modifications to the wrong part of a file.
+
+13. NotebookEdit — Jupyter Cell Editing
+The NotebookEdit tool handles Jupyter notebook cell editing. It supports four commands: replace (overwrite a cell's content), insert_above (add a new cell above a given index), insert_below (add a new cell below a given index), and delete (remove a cell). Each command takes a cell_type (code or markdown), an index identifying the target cell, and optional content.
+
+Search and Discovery Tools
+5. glob_search — File Pattern Matching
+The glob_search tool provides fast file pattern matching across the entire codebase. It accepts a pattern (e.g. **/*.ts, src/**/*.rs) and an optional path to restrict the search directory. Results are sorted by modification time and truncated at 100 files to prevent excessive output.
+
+6. grep_search — Regex Content Search
+The grep_search tool is built on ripgrep and provides powerful regex content search across the codebase. It is one of the most frequently invoked claw code tools during code exploration and debugging.
+
+Parameter   Type  Required    Description
+pattern     string      Yes   Ripgrep regex pattern to search for
+path  string      No    File or directory to search in
+glob  string      No    Glob filter (e.g. "*.js", "**/*.tsx")
+output_mode string      No    content, files_with_matches (default), or count
+-B    integer     No    Lines of context before each match
+-A    integer     No    Lines of context after each match
+-C    integer     No    Lines of context before and after each match
+-n    boolean     No    Show line numbers (default: true)
+-i    boolean     No    Case insensitive search
+type  string      No    File type filter (js, py, rust, go, java, etc.)
+head_limit  integer     No    Limit output to first N entries (default: 250)
+offset      integer     No    Skip first N entries before applying head_limit
+multiline   boolean     No    Enable multiline mode where . matches newlines
+The three output modes serve different purposes: files_with_matches is fastest for locating which files contain a pattern, content shows the actual matching lines with optional context, and count provides match counts per file. The type parameter uses ripgrep's built-in file type definitions, which is more efficient than glob filtering for standard file types.
+
+12. ToolSearch — Deferred Tool Discovery
+The ToolSearch tool searches for deferred tools that have not yet been fully loaded into the agent's context. It accepts a query string and an optional max_results parameter (default: 5). Query forms include exact selection (select:Read,Edit,Grep), keyword search, and name-required search (+slack send). When matched, full JSON schema definitions are returned so the discovered tools can be immediately invoked.
+
+Web Interaction Tools
+7. WebFetch — URL Content Retrieval
+The WebFetch tool retrieves content from a URL and passes it to the agent with an accompanying prompt. This enables the agent to read documentation, check API responses, and gather information from the web during task execution. All URLs are subject to the permission system's network access rules.
+
+8. WebSearch — Web Search with Domain Filtering
+The WebSearch tool performs web searches with optional domain filtering. The agent can restrict results to specific domains (e.g. searching only within documentation sites) to improve relevance. Results are returned as structured data that the agent can parse and act upon.
+
+Agent Orchestration Tools
+11. Agent — Sub-Agent Launcher
+The Agent tool launches sub-agents for parallel task execution. Sub-agents run in isolated contexts and can be configured with different models and capabilities.
+
+Parameter   Type  Required    Description
+description string      Yes   Brief description (3-5 words) of the sub-agent's task
+prompt      string      Yes   Detailed instructions for the sub-agent
+subagent_type     string      No    Type of sub-agent to launch
+name  string      No    Human-readable name for the sub-agent
+model string      No    Model selection: sonnet, opus, or haiku
+run_in_background boolean     No    Run the sub-agent in the background
+isolation   string      No    Isolation mode, e.g. "worktree" for git worktree isolation
+Sub-agents inherit the parent agent's permission context but run in their own conversation thread. The isolation: "worktree" option creates a separate git worktree, allowing the sub-agent to make file changes without interfering with the parent agent's working directory. This is essential for parallel development tasks where multiple agents modify files simultaneously.
+
+10. Skill — Skill Definition Loader
+The Skill tool loads predefined skill definitions that provide specialized domain knowledge and capabilities. It accepts a skill name and optional args. Skills are higher-level abstractions that compose multiple tool calls into structured workflows — for example, a "commit" skill that stages changes, drafts a commit message, and creates the commit in sequence. See the slash commands reference for how skills relate to the command system.
+
+Task and Session Management Tools
+9. TodoWrite — Task List Management
+The TodoWrite tool manages the agent's internal task list. It accepts a todos array where each item has:
+
+id — Unique identifier for the task
+content — Description of the task
+status — One of pending, in_progress, or completed
+priority — One of high, medium, or low
+The agent uses this tool to track multi-step tasks, mark progress, and ensure nothing is missed during complex operations.
+
+14. Sleep — Execution Pause
+The Sleep tool pauses execution for a specified duration without holding a shell process. It accepts a single parameter: duration_ms (milliseconds). Unlike running sleep via the bash tool, this dedicated tool does not occupy a shell resource slot and is the preferred way to introduce delays when waiting for external processes.
+
+15. SendUserMessage — User Communication
+The SendUserMessage tool sends a message to the user with optional attachments. It accepts a message string, an attachments array, and a status field (normal or proactive). The proactive status indicates that the agent is providing unsolicited information, such as a progress update during a long-running task.
+
+16. Config — Runtime Settings
+The Config tool reads and writes agent configuration settings at runtime. It supports three fields: action (get or set), key (the setting name), and value (for set operations). This allows the agent to inspect its own configuration and make adjustments without requiring a restart.
+
+17. StructuredOutput — JSON Data Return
+The StructuredOutput tool returns structured JSON data to the caller. It accepts a single data parameter containing any valid JSON value. This is used when the agent needs to return machine-parseable results rather than natural language — for example, returning a list of found issues as a JSON array for downstream processing.
+
+18. REPL — Language REPL Execution
+The REPL tool executes code in a language-specific REPL environment. It accepts a language parameter (identifying the runtime) and a code parameter (the code to execute). Unlike the bash tool, the REPL maintains state between invocations within the same session, making it suitable for exploratory programming and iterative data analysis.
+
+Python Tool Layer
+The Python side of the claw code tools system, defined in src/tools.py, provides the orchestration layer that bridges the LLM's tool calls with the Rust execution engine.
+
+ToolExecution Dataclass
+Every tool invocation is tracked as a ToolExecution dataclass with the following fields:
+
+name — The tool name as specified by the LLM
+source_hint — Where the tool originated (base, MCP server name, etc.)
+payload — The JSON input from the LLM
+handled — Whether the execution has been processed
+message — The result message to return to the LLM
+Key Functions
+Function    Purpose
+load_tool_snapshot()    Reads the tool registry from reference_data/tools_snapshot.json. Cached with @lru_cache(maxsize=1) for efficient repeated access.
+get_tools(simple_mode, include_mcp, permission_context)     Returns the available tool set. In simple_mode, restricts to BashTool, FileReadTool, and FileEditTool only.
+filter_tools_by_permission_context()      Removes tools blocked by the current ToolPermissionContext.
+execute_tool(name, payload)   Shim execution that dispatches the tool call and returns a ToolExecution instance.
+find_tools(query, limit=20)   Substring search across tool names and source hints. Returns up to limit matching tools.
+# Simplified tool execution flow (src/tools.py) def execute_tool(name: str, payload: dict) -> ToolExecution: execution = ToolExecution( name=name, source_hint=resolve_source(name), payload=payload, handled=False, message=None ) # Dispatch to Rust runtime for actual execution result = runtime.dispatch_tool(name, payload) execution.handled = True execution.message = result return execution
+ToolPool Assembly
+The ToolPool (defined in src/tool_pool.py) is the runtime container for all available tools in a given session. It determines exactly which claw code tools the agent can see and invoke.
+
+ToolPool Dataclass
+The ToolPool dataclass holds three fields: tools (the filtered list of available tools), simple_mode (boolean restricting to core tools), and include_mcp (boolean controlling whether MCP tools are included).
+
+Assembly Process
+The assemble_tool_pool() function builds the final tool set through a filtering pipeline:
+
+Load all registered base tools from the snapshot
+If simple_mode, restrict to BashTool, FileReadTool, FileEditTool
+If include_mcp, add tools from connected MCP servers
+Apply ToolPermissionContext filtering to remove denied tools
+Render up to 15 tools in markdown format for the system prompt
+On the Rust side, the equivalent structures are ToolManifestEntry (pairing a tool name with a ToolSource — either Base or Conditional) and ToolRegistry (a wrapper around Vec<ToolManifestEntry>). The manifest distinguishes between tools that are always available and tools that are conditionally loaded based on context (e.g. platform-specific tools like PowerShell).
+
+// Rust-side tool manifest (rust/crates/tools/src/lib.rs) pub struct ToolManifestEntry { pub name: String, pub source: ToolSource, } pub enum ToolSource { Base, // Always available Conditional, // Loaded based on context } pub struct ToolRegistry(Vec<ToolManifestEntry>);
+Permission Gating
+Every tool invocation passes through the permission gating system before execution. This is the security boundary that prevents the agent from performing unauthorized actions.
+
+Python-Side: ToolPermissionContext
+The ToolPermissionContext contains two filtering mechanisms:
+
+deny_names — A frozenset of exact tool names that are blocked
+deny_prefixes — A tuple of name prefixes that block any tool starting with that prefix
+The blocks(tool_name) method checks the tool name against both lists: first an exact match against deny_names, then a prefix match against deny_prefixes. If either matches, the tool is blocked and will not appear in the agent's available tool set.
+
+# Permission checking (src/tools.py) class ToolPermissionContext: deny_names: frozenset[str] deny_prefixes: tuple[str, ...] def blocks(self, tool_name: str) -> bool: if tool_name in self.deny_names: return True return any( tool_name.startswith(prefix) for prefix in self.deny_prefixes )
+Rust-Side: PermissionPolicy
+The Rust permission system is more granular, built around three concepts:
+
+Concept     Type  Description
+PermissionMode    enum  Three modes: Allow (auto-approve), Deny (block), Prompt (ask user)
+PermissionPolicy  struct      Contains a default_mode and a per-tool BTreeMap of mode overrides
+Per-tool overrides      BTreeMap    Maps specific tool names to specific PermissionMode values, overriding the default
+When a tool call arrives, the permission engine first checks the per-tool BTreeMap for an explicit override. If none exists, it falls back to the default_mode. Tools in Allow mode execute immediately. Tools in Deny mode return a denial message to the LLM. Tools in Prompt mode pause execution and ask the user for confirmation before proceeding.
+
+Permission Configuration
+Permissions are configured through the three-tier settings system (~/.claude/settings.json, .claude/settings.json, .claude/settings.local.json). Project-level settings can restrict tool access for all collaborators, while user-level settings provide personal overrides. See the Configuration System documentation for details on the merge strategy.
+
+ToolSpec Schema Pattern
+Every one of the 19 claw code tools follows the ToolSpec pattern: a struct containing a name (string identifier used in tool calls), a description (natural language explanation sent to the LLM as part of the system prompt), and an input_schema (JSON Schema defining the accepted parameters). This uniform pattern ensures consistency across all tools and simplifies the tool registration process.
+
+// ToolSpec definition (rust/crates/tools/src/lib.rs) pub struct ToolSpec { pub name: String, pub description: String, pub input_schema: serde_json::Value, } // Example: registering the bash tool ToolSpec { name: "bash".into(), description: "Execute a shell command in a sandboxed environment".into(), input_schema: json!({ "type": "object", "required": ["command"], "properties": { "command": { "type": "string" }, "timeout": { "type": "integer", "maximum": 600000 }, "description": { "type": "string" }, "run_in_background": { "type": "boolean" }, "dangerously_disable_sandbox": { "type": "boolean" } } }), }
+The input schema is a standard JSON Schema object. The required array lists mandatory parameters, while optional parameters are defined in properties without appearing in required. The Rust runtime validates all incoming tool inputs against these schemas before execution, rejecting malformed inputs with a descriptive error message that helps the LLM correct its call.
+
+Complete Tool Reference Table
+The following table summarizes all 19 claw code tools with their primary function and category:
+
+#     Tool  Category    Description
+1     bash  Shell Execute shell commands with sandbox, timeout, and background support
+2     read_file   File  Read files with offset/limit, supports PDFs, images, and notebooks
+3     write_file  File  Create or overwrite files with structured_patch and git_diff output
+4     edit_file   File  Precise string replacement with uniqueness validation
+5     glob_search Search      File pattern matching, sorted by modification time, truncates at 100
+6     grep_search Search      Regex content search built on ripgrep with 13 parameters
+7     WebFetch    Web   Fetch URL content with prompt
+8     WebSearch   Web   Web search with domain filtering
+9     TodoWrite   Task  Task list management with id, content, status, and priority
+10    Skill Agent Load skill definitions for specialized workflows
+11    Agent Agent Launch sub-agents with model selection and worktree isolation
+12    ToolSearch  Discovery   Search deferred tool definitions by query
+13    NotebookEdit      File  Jupyter notebook cell editing (replace, insert, delete)
+14    Sleep Utility     Wait for duration_ms without holding a shell process
+15    SendUserMessage   Communication     Message the user with attachments, normal or proactive status
+16    Config      Settings    Get/set agent configuration via action, key, value
+17    StructuredOutput  Output      Return machine-parseable JSON data to caller
+18    REPL  Execution   Execute code in a language REPL with persistent state
+19    PowerShell  Shell Windows PowerShell execution with sandbox (conditional)
+Related Topics
+Claw Code Architecture
+Dual-layer Python + Rust system design
+Slash Commands
+15 built-in commands for agent control
+Rust Runtime Core
+High-performance agent execution engine
+Getting Started
+Install and configure Claw Code
+
+Copy Page
+On This Page
+Tool Architecture Overview
+Shell Execution Tools
+File Operation Tools
+Search and Discovery Tools
+Web Interaction Tools
+Agent Orchestration Tools
+Task and Session Management
+Python Tool Layer
+ToolPool Assembly
+Permission Gating
+ToolSpec Schema Pattern
+Complete Tool Reference
+>_ claw-code
+Open-source AI coding agent framework.
+Clean-room Python & Rust rewrite of the Claude Code architecture.
+Documentation
+Architecture
+Tool System
+Commands
+Rust Runtime
+Query Engine
+Platform
+Sessions
+Permissions
+MCP Integration
+API Client
+Resources
+Getting Started
+Claw Code vs Claude Code
+Source Leak Timeline
+Language
+English
+简体中文
+繁體中文(港)
+繁體中文(台)
+한국어
+Claw Code is an independent open-source project. Not affiliated with Anthropic.
+Claude Code is a trademark of Anthropic, PBC.
+
+GitHub
+llms.txt
+Sitemap
+
+
+>_ claw-code
+Home
+Architecture
+Tools
+Commands
+Rust Core
+GitHub
+English
+Home › Commands
+Command Reference
+Claw Code Commands: 15 Slash Commands for AI Agent Control
+The Claw Code command system gives developers fine-grained control over the AI agent session. Every slash command is registered through a unified CommandRegistry, categorized by source, and dispatched through a structured execution pipeline that spans both the Python orchestration layer and the Rust runtime core.
+
+Documentation
+Architecture
+Tool System
+Commands
+Rust Runtime
+Query Engine
+Sessions
+Permissions
+MCP Integration
+API Client
+Resources
+Getting Started
+Comparison
+Leak Timeline
+The Claw Code Command System
+At the heart of Claw Code's interactive experience is its command system — a structured registry of slash commands that let developers control every aspect of an active agent session. Unlike ad-hoc text parsing, Claw Code treats commands as first-class entities with formal type definitions, source tracking, and categorization metadata. This design complements the tool system, which provides the agent's execution capabilities. This design ensures that the command surface is discoverable, extensible, and consistent across the Python and Rust layers of the framework.
+
+Every command in Claw Code is represented by a CommandManifestEntry — a frozen dataclass containing a name (the slash command string) and a CommandSource enum that classifies how the command was introduced into the system. The three possible sources are: Builtin (shipped with the core framework and always available), InternalOnly (available only in development or debug builds), and FeatureGated (requires a specific feature flag to be enabled at runtime).
+
+The CommandRegistry is the central data structure that holds all registered CommandManifestEntry objects. It is populated at startup from a combination of hardcoded definitions and dynamically loaded plugin manifests. The Python orchestration layer mirrors this registry from a JSON snapshot file, ensuring that the Python CLI and the Rust REPL always agree on which commands are available and how they behave. This mirroring strategy eliminates a common source of bugs in dual-runtime systems — command definition drift between layers.
+
+Beyond individual entries, commands are further organized through a CommandGraph — a categorization layer that groups commands into builtins (core session management), plugin-like (extensible functionality contributed by optional modules), and skill-like (higher-order capabilities that compose multiple tools and commands). This three-tier categorization drives both the help output and the command-routing logic, ensuring that the agent can intelligently suggest relevant commands based on the current session context. For a broader view of how commands fit into the system, see the architecture overview.
+
+Complete Claw Code Slash Command Reference
+Claw Code ships with exactly 15 slash commands. Each command has a defined argument signature, a resume compatibility flag (whether it can be re-executed when resuming a saved session), and a specific function within the agent lifecycle. The following table provides the complete Claw Code command reference:
+
+Command     Arguments   Resume?     Description
+/help none  No    Display help and available commands
+/status     none  Yes   Show current session status, turns, usage
+/compact    none  Yes   Compress conversation history
+/model      [model]     No    Switch or display current LLM model
+/permissions      [mode]      No    View or change permission mode
+/clear      [--confirm] Yes   Clear conversation context
+/cost none  Yes   Display token usage and cost breakdown
+/resume     <session-path>    No    Resume a previously saved session
+/config     [env|hooks|model] Yes   View or modify runtime configuration
+/memory     none  Yes   Display agent memory state
+/init none  Yes   Re-initialize project context
+/diff none  Yes   Show uncommitted file changes
+/version    none  Yes   Display version information
+/export     [file]      Yes   Export conversation to file
+/session    [list|switch <id>]      No    Manage multiple sessions
+Of the 15 total commands, 11 support resume — meaning they can be automatically re-executed when restoring a saved session. The four non-resumable commands (/help, /model, /permissions, /resume, and /session) are excluded because they either produce transient output, modify fundamental session parameters that should be set explicitly, or are themselves responsible for the resume mechanism.
+
+Command Details
+/help
+Prints the full list of available slash commands, their argument signatures, and short descriptions. The output is generated dynamically from the CommandRegistry, so it always reflects the current set of enabled commands including any feature-gated or plugin-contributed entries. This is the recommended first command for new users exploring the Claw Code interface.
+
+/status
+Displays a summary of the current session state, including the number of conversation turns completed, the active LLM model, cumulative token usage, and whether compaction has been applied. Useful for monitoring long-running sessions and understanding resource consumption at a glance.
+
+/compact
+Triggers conversation history compression. When a session accumulates a large number of turns, the context window can become saturated. The /compact command summarizes older conversation history into a condensed representation, freeing context space for new interactions as part of the session management system while preserving the essential information the agent needs to maintain coherence. The compaction process preserves the most recent 4 messages verbatim and targets a maximum of 10,000 tokens for the compressed summary.
+
+/model
+When called without arguments, displays the currently active LLM model identifier. When called with a model name (e.g., /model claude-sonnet-4-20250514), switches the active model for subsequent turns. The model switch takes effect immediately and is reflected in /status output. This command is not resumable because model availability may change between sessions.
+
+/permissions
+Controls the agent's permission mode, which determines what operations the agent can perform autonomously. The three modes are: ReadOnly (the agent can only read files and display information), WorkspaceWrite (the agent can read and write files within the project directory), and DangerFullAccess (the agent can execute arbitrary shell commands and modify any file on the system). Defaults to WorkspaceWrite for safety.
+
+/clear
+Resets the conversation context, removing all previous messages and tool results from the active context window. Accepts an optional --confirm flag to skip the confirmation prompt. Unlike /compact, which preserves a summary, /clear provides a complete fresh start while maintaining the same session identity.
+
+/cost
+Provides a detailed breakdown of token usage and estimated cost for the current session. Shows input tokens, output tokens, cache read/write tokens, and the calculated cost based on the active model's pricing. The format_usd utility outputs costs in $X.XXXX format (four decimal places), providing precision even for sessions that consume relatively few tokens.
+
+/resume
+Loads a previously saved session from disk and restores the conversation state. Requires a <session-path> argument pointing to the saved session file. After loading, all resume-compatible commands from the original session are re-executed to rebuild the agent's context. This command cannot itself be resumed, as it is the mechanism that initiates the resume process.
+
+/config
+Provides access to runtime configuration settings. Subcommands include env (display environment variables), hooks (list registered hooks and their triggers), and model (show model configuration details). Without arguments, displays the full configuration summary.
+
+/memory
+Shows the current state of the agent's memory system, including session memory (current conversation), project memory (persistent per-project knowledge), and global memory (cross-project patterns). Displays memory utilization, stored entries, and the most recently accessed memory segments.
+
+/init
+Re-initializes the project context by re-scanning the working directory, reloading configuration files (including CLAUDE.md and .claude/ settings), and refreshing the tool registry. Useful after making changes to project structure or configuration files that the agent should pick up without starting a new session.
+
+/diff
+Displays uncommitted file changes in the current working directory, equivalent to running git diff plus git status. Shows both staged and unstaged modifications, providing a quick way to review the agent's file modifications before committing.
+
+/version
+Prints the current Claw Code version string, including the build hash and the active runtime (Python, Rust, or hybrid). Useful for bug reports and ensuring compatibility with documentation.
+
+/export
+Exports the current conversation to a file. Without arguments, writes to a timestamped file in the current directory. With a [file] argument, writes to the specified path. The export includes all messages, tool calls, and results in a structured format suitable for review, sharing, or archival.
+
+/session
+Manages multiple concurrent sessions. /session list shows all active and saved sessions with their identifiers, turn counts, and last-active timestamps. /session switch <id> switches to a different session, preserving the current session's state. This command is not resumable because session management is inherently a top-level navigation operation.
+
+Command Graph: Claw Code Categorization System
+Beyond the flat registry, Claw Code organizes its commands through a CommandGraph — a frozen dataclass that provides a structured, categorical view of the entire command surface. The CommandGraph is the primary mechanism through which the framework understands command relationships, generates documentation, and powers the /help output.
+
+The CommandGraph dataclass defines three fields, each a tuple of PortingModule references:
+
+builtins — Core session management commands that ship with every Claw Code installation. These include /help, /status, /compact, /clear, /cost, /version, and /diff. Builtins are always available regardless of configuration or feature flags.
+plugin_like — Commands contributed by optional modules that extend the base functionality. These include /model, /permissions, /config, /export, and /session. Plugin-like commands may be conditionally available based on installed extensions.
+skill_like — Higher-order commands that compose multiple tools and lower-level commands into complex workflows. These include /resume, /memory, and /init. Skill-like commands typically involve multi-step execution and may spawn sub-operations internally.
+# CommandGraph definition (frozen dataclass) @dataclass(frozen=True) class CommandGraph: builtins: tuple[PortingModule, ...] plugin_like: tuple[PortingModule, ...] skill_like: tuple[PortingModule, ...] def flattened(self) -> list[PortingModule]: """Return all modules across all categories.""" return [*self.builtins, *self.plugin_like, *self.skill_like] def as_markdown(self) -> str: """Render the command graph as formatted Markdown.""" sections = [] for label, group in [ ("Builtins", self.builtins), ("Plugin-like", self.plugin_like), ("Skill-like", self.skill_like), ]: sections.append(f"## {label}\n") for mod in group: sections.append(f"- {mod.name}") return "\n".join(sections)
+The flattened() method returns all commands across all categories as a single list, useful for iteration, validation, and search operations. The as_markdown() method generates a human-readable markdown representation of the command graph, used by the /help command and documentation generation tooling to produce consistent output.
+
+The graph is constructed by the build_command_graph() factory function, which reads the CommandRegistry, inspects each entry's source and metadata, and assigns it to the appropriate category. This function runs once at startup and the resulting graph is cached as an immutable frozen dataclass for the lifetime of the session, ensuring zero allocation overhead on subsequent lookups.
+
+Claw Code CLI Subcommands
+Beyond the 15 interactive slash commands, the Claw Code Python CLI (main.py) exposes 27 additional subcommands for development, debugging, and operational tasks. These subcommands are invoked directly from the shell (e.g., python main.py summary) rather than from within an active agent session. Together with the slash commands, they form the complete Claw Code command surface of 42 distinct operations.
+
+summary
+Generate a high-level summary of the current project state, including file counts, language breakdown, and detected frameworks.
+
+manifest
+Print the full command manifest as JSON, listing every registered command with its source, arguments, and resume compatibility flag.
+
+parity-audit
+Run a parity check between the Python command registry and the Rust command registry, reporting any discrepancies in command availability or behavior across the two runtimes.
+
+setup-report
+Generate a diagnostic report of the current installation, including Python version, Rust toolchain status, installed dependencies, and configuration file locations.
+
+command-graph
+Print the CommandGraph categorization, showing which commands are classified as builtins, plugin-like, or skill-like with their full metadata.
+
+tool-pool
+Display the current tool pool — the set of tools available to the agent in the active configuration, including any permission restrictions and gating status.
+
+bootstrap-graph
+Visualize the bootstrap dependency graph, showing the initialization order of subsystems during agent startup and the edges between dependent modules.
+
+subsystems
+List all registered subsystems with their initialization status, dependency chains, and health indicators for operational monitoring.
+
+commands
+List all available slash commands in a compact table format, equivalent to running /help outside of an active session. Useful for scripting and documentation generation.
+
+tools
+List all registered tools with their permission requirements, argument schemas, and current enabled/disabled status.
+
+route
+Test the command routing logic by providing a sample input string and displaying which command or tool would be selected by the dispatch router.
+
+bootstrap
+Run the full bootstrap sequence without entering the interactive REPL, useful for verifying that initialization completes successfully in CI environments.
+
+turn-loop
+Execute a single turn of the agent loop with a provided prompt, returning the result without entering interactive mode. Designed for programmatic agent invocation via the query engine.
+
+flush-transcript
+Write the current session transcript to disk, flushing any buffered messages that have not yet been persisted to the session file.
+
+load-session
+Load a saved session file and display its contents without entering resume mode. Useful for inspecting session state and debugging persistence issues.
+
+remote-mode
+Start the agent in remote mode, connecting to a remote compute backend for model execution while running the REPL locally for reduced latency.
+
+ssh-mode
+Start the agent with SSH tunneling, allowing secure remote access to the agent session from another machine over an encrypted channel.
+
+teleport-mode
+Transfer an active session to a different machine, preserving full conversation state, context, and tool registrations across the network hop.
+
+direct-connect-mode
+Establish a direct peer-to-peer connection to another Claw Code instance for collaborative multi-agent operation with shared context.
+
+deep-link-mode
+Start the agent from a deep link URL, pre-populating the session with context, configuration, and initial prompts encoded in the link parameters.
+
+show-command
+Display detailed information about a specific slash command, including its source, argument schema, resume compatibility, and implementation location in the codebase.
+
+show-tool
+Display detailed information about a specific tool, including its permission requirements, input/output schema, and usage examples for integration testing.
+
+exec-command
+Execute a slash command programmatically from the shell, bypassing the interactive REPL. Returns structured output suitable for scripting and CI/CD pipelines.
+
+exec-tool
+Execute a tool directly from the shell with JSON-encoded arguments, returning the tool result to stdout. Designed for testing and automation workflows.
+
+These 27 subcommands — combined with the 15 interactive slash commands — give Claw Code a total command surface of 42 distinct operations, covering everything from interactive session management to programmatic automation, remote operation modes, and comprehensive system introspection.
+
+Claw Code Command Execution Pipeline
+When a user types a slash command in the Claw Code REPL, it passes through a multi-stage execution pipeline that spans both the Python orchestration layer and the Rust runtime core. Understanding this pipeline is essential for developers extending the command system or debugging unexpected command behavior.
+
+The pipeline begins with the CommandExecution dataclass, which encapsulates the full lifecycle state of a command in flight:
+
+@dataclass class CommandExecution: name: str # The slash command name (e.g., "compact") source_hint: CommandSource # Origin: Builtin, InternalOnly, FeatureGated prompt: str # The full user input string handled: bool # Whether execution completed successfully message: str # Result message or error description
+The execution flow proceeds through five stages. First, the REPL input parser detects the leading / character and extracts the command name and any trailing arguments. Second, the CommandRegistry is consulted to verify the command exists and retrieve its CommandManifestEntry. If the command is not found, an error message is displayed and no CommandExecution is created.
+
+Third, for commands handled in the Python layer, execution is dispatched directly to the corresponding handler function via execute_command(name, prompt). For commands that require Rust runtime support — such as /compact, which involves memory-intensive context manipulation, or /diff, which interfaces with the Git subsystem — the execution is forwarded to the Rust CLI binary (rusty-claude-cli) via an inter-process call. The Rust REPL handles these commands through its handle_slash_command function, which receives the current session context and compaction state as parameters.
+
+Fourth, after execution completes, the handled flag is set to true and the message field is populated with the result. Finally, the REPL displays the message to the user and records the command in the session transcript for potential future resume.
+
+Command Execution Pipeline
+===========================
+
+User Input: "/compact"
+     |
+     v
+[REPL Input Parser] ── detect "/" prefix, extract name + args
+     |
+     v
+[CommandRegistry] ── lookup "compact" -> CommandManifestEntry
+     |
+     v
+[CommandExecution] ── create: name="compact", source=Builtin
+     |
+     v
+[Dispatch Router] ── Python handler or Rust delegation?
+     |                    |
+     |                    v
+     |            [Rust: handle_slash_command()]
+     |                    |
+     v                    v
+[Python Handler]   [Rust Handler]
+     |                    |
+     v                    v
+[Result] ── handled=true, message="Context compacted."
+     |
+     v
+[Session Transcript] ── record for resume compatibility
+This layered dispatch architecture ensures that performance-critical operations remain in Rust while complex orchestration logic stays in Python. The inter-process boundary is crossed only when necessary, minimizing overhead for commands that can be handled entirely within a single runtime.
+
+Session Resume and Claw Code Command Persistence
+One of the most powerful features of the Claw Code command system is its resume capability — the ability to save a session to disk and later restore it with full context reconstruction. This feature is critical for long-running development tasks that span multiple terminal sessions, workdays, or even machines.
+
+The resume mechanism is built on the resume_session(path, commands) function, which takes two arguments: a file path pointing to the saved session file, and the current CommandRegistry (used to validate that all commands from the saved session are still available in the current installation). This validation step prevents resume failures caused by version mismatches or removed commands.
+
+When a session is resumed, the function loads the serialized session state and iterates through the transcript of previously executed commands. For each command marked as resume-compatible, the function re-executes it against the current session context. This means that a resumed session will re-apply /compact to restore compressed context, re-display /status to verify state, reload /config settings, and re-initialize project context via /init — effectively reconstructing the agent's full working state from the command history.
+
+The session state itself is tracked by the SessionState dataclass, which records four key fields:
+
+turns — The total number of conversation turns completed in the session, used for /status display and billing calculations.
+compacted_messages — A list of compressed message summaries produced by /compact operations, representing the condensed history of the conversation.
+last_model — The identifier of the most recently active LLM model, preserved for informational purposes but not automatically restored on resume.
+last_usage — A snapshot of token usage at the time the session was saved, enabling accurate cost tracking across session boundaries.
+@dataclass class SessionState: turns: int compacted_messages: list[str] last_model: str last_usage: UsageSnapshot def resume_session( path: Path, commands: CommandRegistry ) -> SessionState: """Load a saved session and re-execute resume-compatible commands.""" state = load_session_file(path) for cmd in state.transcript: if cmd.resumable and cmd.name in commands: execute_command(cmd, commands) return state
+The four non-resumable commands are excluded for deliberate reasons: /help produces transient display output with no state effect; /model could fail if the previously selected model is no longer available or could incur unexpected costs; /permissions could inadvertently escalate privileges on resume without the user's explicit consent; /resume cannot resume itself (it is the entry point for the resume process); and /session operates at a level above individual sessions. This 11-of-15 resume ratio reflects a careful design balance between convenience and safety.
+
+Session files are stored in a configurable directory (defaulting to .claude/sessions/) and use a JSON-based serialization format. Each file contains the full SessionState, the command transcript with timestamps, and metadata including the working directory and Claw Code version at the time of save. This comprehensive serialization ensures that sessions can be safely moved between machines or shared with collaborators, provided the same project context is available at the destination.
+
+Resume Best Practice
+When resuming a session that was saved with a specific model (e.g., claude-sonnet-4-20250514), the resume process does not automatically switch to that model. Use /model after resuming to explicitly set the desired model. This is by design — model availability and pricing may have changed between sessions, and automatic switching could lead to unexpected costs or failures.
+
+Related Topics
+Tool System
+19 built-in tools for AI agents
+Architecture
+Full system design overview
+Session Management
+Persistence and memory
+Getting Started
+Installation and first commands
+
+Copy Page
+On This Page
+The Command System
+Slash Command Reference
+Command Graph
+CLI Subcommands
+Execution Pipeline
+Session Resume
+>_ claw-code
+Open-source AI coding agent framework.
+Clean-room Python & Rust rewrite of the Claude Code architecture.
+Documentation
+Architecture
+Tool System
+Commands
+Rust Runtime
+Query Engine
+Platform
+Sessions
+Permissions
+MCP Integration
+API Client
+Resources
+Getting Started
+Claw Code vs Claude Code
+Source Leak Timeline
+Language
+English
+简体中文
+繁體中文(港)
+繁體中文(台)
+한국어
+Claw Code is an independent open-source project. Not affiliated with Anthropic.
+Claude Code is a trademark of Anthropic, PBC.
+
+GitHub
+llms.txt
+Sitemap
+
+
+>_ claw-code
+Architecture
+Tools
+Commands
+Rust Runtime
+Getting Started
+GitHub
+English
+Home› Rust Runtime
+Rust Core
+Claw Code Rust Runtime: The High-Performance Agent Core
+A complete technical reference for the 6-crate Rust workspace that powers Claw Code's performance-critical subsystems — from Anthropic API communication and streaming to tool execution, permission enforcement, and the terminal REPL.
+
+Documentation
+Architecture
+Tool System
+Commands
+Rust Runtime
+Query Engine
+Sessions
+Permissions
+MCP Integration
+API Client
+Resources
+Getting Started
+Comparison
+Leak Timeline
+The claw code rust runtime is the engine behind every interaction in the Claw Code agent. While Python handles high-level orchestration and prompt engineering as described in the architecture overview, the Rust layer accounts for roughly 72.9% of the codebase and is responsible for everything that must be fast, safe, and concurrent: HTTP streaming, file system operations, process management, permission checks, and the interactive terminal experience. The runtime is organized as a 6-crate Cargo workspace, each crate owning a clearly bounded domain.
+
+6-Crate Workspace Overview
+The Rust side of Claw Code is not a monolith. It is a Cargo workspace comprising six crates that compile independently and expose well-defined interfaces to each other. This separation enforces compile-time boundaries between the API transport layer, the runtime engine, the tool registry, the command parser, the TypeScript compatibility shim, and the terminal binary.
+
+Crate Purpose     Key Metrics
+api   Anthropic Messages API client — authentication, streaming, retry logic, OAuth 7 retryable status codes, exponential backoff
+runtime     Core engine — 16 internal modules covering bash execution, config, conversation loop, file ops, MCP, permissions, sessions, and more      16 modules, 12 bootstrap phases
+tools Tool specifications with full JSON schemas and a unified execute_tool dispatch      19 tool specs
+commands    Slash command parser and handler    15 slash commands
+compat-harness    TypeScript compatibility layer for bridging the original TS codebase    Interop shim
+rusty-claude-cli  Terminal binary — REPL, spinner, syntax highlighting, line editor, OAuth flow Braille spinner, 3 output formats
+The api Crate: Anthropic Messages API Client
+The api crate is the sole interface between Claw Code and Anthropic's servers. It handles authentication, request construction, response parsing, streaming via Server-Sent Events, and automatic retry with exponential backoff. Every message exchange — whether a single-shot request or a multi-turn streaming conversation — flows through this crate.
+
+Authentication Model
+Authentication is managed through the AuthSource enum, which supports four variants to cover every deployment scenario:
+
+None — No credentials provided; useful for testing or when auth is handled externally.
+ApiKey(String) — A standard Anthropic API key.
+BearerToken(String) — An OAuth bearer token for token-based authentication flows.
+ApiKeyAndBearer { api_key, bearer_token } — Both credentials simultaneously, for scenarios requiring dual authentication.
+The convenience function from_env() reads ANTHROPIC_API_KEY and ANTHROPIC_AUTH_TOKEN from environment variables, automatically selecting the appropriate AuthSource variant based on which variables are present.
+
+The AnthropicClient Struct
+The central type is AnthropicClient, which holds the HTTP transport (powered by reqwest), the AuthSource, and retry configuration:
+
+struct AnthropicClient { http: reqwest::Client, auth: AuthSource, base_url: String, // DEFAULT_BASE_URL = "https://api.anthropic.com" max_retries: u32, // DEFAULT_MAX_RETRIES = 2 initial_backoff: Duration, // DEFAULT_INITIAL_BACKOFF = 200ms max_backoff: Duration, // DEFAULT_MAX_BACKOFF = 2s }
+Two primary methods handle message exchange:
+
+send_message() — Non-streaming. Sends a MessageRequest and returns a complete MessageResponse.
+stream_message() — Streaming. Returns a MessageStream that yields StreamEvent variants as they arrive over SSE.
+For OAuth workflows, the crate exposes exchange_oauth_code() and refresh_oauth_token(), enabling the full authorization code exchange and token refresh cycle.
+
+Constants and Defaults
+Constant    Value
+DEFAULT_BASE_URL  "https://api.anthropic.com"
+ANTHROPIC_VERSION "2023-06-01"
+DEFAULT_MAX_RETRIES     2
+DEFAULT_INITIAL_BACKOFF 200ms
+DEFAULT_MAX_BACKOFF     2s
+Retry Logic and Error Handling
+The client automatically retries requests that fail with specific HTTP status codes. The following statuses are considered retryable: 408 (Request Timeout), 409 (Conflict), 429 (Too Many Requests), 500 (Internal Server Error), 502 (Bad Gateway), 503 (Service Unavailable), and 504 (Gateway Timeout). Retries use exponential backoff capped at max_backoff.
+
+Errors are modeled by the ApiError enum:
+
+MissingApiKey — No API key configured and none found in environment.
+ExpiredOAuthToken — The OAuth token has expired and needs refresh.
+Auth — Generic authentication failure.
+Http — Transport-level error from reqwest.
+Io — File system or I/O error.
+Json — Serialization or deserialization failure.
+Api { status, error_type, message, retryable } — Structured API error with retry eligibility.
+RetriesExhausted — All retry attempts failed.
+API Types
+The crate defines the full request and response model for the Anthropic Messages API:
+
+MessageRequest — Fields: model, max_tokens, messages, system, tools, tool_choice, stream.
+MessageResponse — Fields: id, role, content, stop_reason, usage.
+StreamEvent — Variants: MessageStart, MessageDelta, ContentBlockStart, ContentBlockDelta, ContentBlockStop, MessageStop.
+The runtime Crate: 16 Internal Modules
+The runtime crate is the largest and most complex part of the claw code rust runtime. It contains 16 internal modules, each responsible for a distinct subsystem. Together they form the engine that drives every conversation turn: executing bash commands, managing configuration, running the tool-use loop, handling file operations, enforcing permissions, building system prompts, and tracking token usage.
+
+bash
+The bash module handles shell command execution. It defines BashCommandInput and BashCommandOutput types and executes commands via sh -lc (login shell) using tokio async with configurable timeouts. For long-running processes, background execution is supported through Command::spawn, which detaches the child process and returns immediately.
+
+bootstrap
+The bootstrap module defines a BootstrapPhase enum with 12 phases that the agent traverses during startup:
+
+CliEntry
+FastPathVersion
+StartupProfiler
+SystemPromptFastPath
+ChromeMcpFastPath
+DaemonWorkerFastPath
+BridgeFastPath
+DaemonFastPath
+BackgroundSessionFastPath
+TemplateFastPath
+EnvironmentRunnerFastPath
+MainRuntime
+Each phase represents a checkpoint in the startup pipeline. The "FastPath" phases are optimized early-exit paths that skip unnecessary initialization when the agent detects it can satisfy the request without the full runtime (for example, printing the version number or reusing a cached system prompt).
+
+compact
+The compact module implements conversation compaction — the process of summarizing long conversations to fit within token limits. It uses a CompactionConfig with preserve_recent = 4 (keep the last 4 messages intact) and max_estimated_tokens = 10000. Token estimation uses a ~4 chars/token heuristic. The compaction process strips <analysis> tags, collects key files by extension (.rs, .ts, .tsx, .js, .json, .md), and truncates the generated summary at 160 characters.
+
+config
+Configuration in Claw Code is layered. The config module defines a ConfigSource enum (User, Project, Local) and discovers three configuration files in order:
+
+~/.claude/settings.json — User-level settings.
+.claude/settings.json — Project-level settings (checked into version control).
+.claude/settings.local.json — Local overrides (git-ignored).
+MCP server transports are modeled by the McpTransport enum with six variants: Stdio, Sse, Http, Ws, Sdk, and ClaudeAiProxy. Configuration merging uses a BTreeMap-based deep merge strategy where more specific sources (Local) override less specific ones (User).
+
+conversation
+The conversation module is the heart of the agent loop. It defines ConversationRuntime<C, T>, generic over two traits: ApiClient (for LLM communication) and ToolExecutor (for tool invocation). The runtime enforces a max_iterations = 16 limit on the tool-use loop. Each iteration sends the current message history to the LLM, checks whether the response includes tool calls, executes them if present, appends the results, and repeats — until either the model stops requesting tools or the iteration limit is reached.
+
+file_ops
+The file_ops module provides five core operations: read_file, write_file, edit_file, glob_search, and grep_search. The default head_limit is 250 lines, and glob results are truncated at 100 files. The edit_file function returns an EditFileOutput struct that includes both a structured_patch and a git_diff representation of the change, enabling downstream consumers to display or apply edits in whichever format suits their needs.
+
+json
+Rather than depending on serde_json, the claw code rust runtime includes a zero-dependency JSON parser. The json module defines a JsonValue enum with six variants: Null, Bool, Number, String, Array, and Object. It includes a full parser with unicode escape handling, keeping the dependency tree lean for contexts where minimizing compile times or binary size matters.
+
+mcp and mcp_client
+The mcp module handles MCP (Model Context Protocol) integration. It provides normalize_name_for_mcp for sanitizing tool names and uses the naming convention mcp__{server}__{tool} to namespace MCP tools. An FNV-1a hash is used for fast configuration comparison, detecting when MCP server configs have changed and need reconnection.
+
+The mcp_client module builds on this with McpClientTransport (6 variants matching the McpTransport enum) and McpClientAuth (None or OAuth). The McpClientBootstrap type provides from_scoped_config for initializing MCP client connections from the layered configuration system.
+
+oauth
+The oauth module implements the full PKCE (Proof Key for Code Exchange) flow. It provides generate_pkce_pair and S256 challenge generation, stores tokens as OAuthTokenSet, and persists credentials at ~/.claude/credentials.json. File writes use atomic temp-file saves to prevent credential corruption if the process is interrupted mid-write.
+
+permissions
+Permission enforcement is handled by the permissions module. The PermissionMode enum has three variants: Allow, Deny, and Prompt. The PermissionPolicy type holds a per-tool BTreeMap mapping tool names to their permission modes. A PermissionPrompter trait allows different frontends (CLI, GUI, test harness) to provide their own interactive prompt implementation.
+
+prompt
+The prompt module constructs the system prompt sent to the LLM at the beginning of each conversation. The SystemPromptBuilder assembles context from multiple sources. Key constants:
+
+FRONTIER_MODEL_NAME = "Claude Opus 4.6"
+MAX_INSTRUCTION_FILE_CHARS = 4000
+MAX_TOTAL_INSTRUCTION_CHARS = 12000
+The builder discovers CLAUDE.md files by walking ancestor directories from the current working directory upward. It applies content hash deduplication to avoid injecting the same instructions multiple times when a project has identical CLAUDE.md files at different directory levels.
+
+remote
+The remote module manages upstream proxy configuration. It defines DEFAULT_REMOTE_BASE_URL and maintains a list of 16 no-proxy hosts that bypass the upstream proxy, including localhost, anthropic.com, github.com, and others. This ensures that local development traffic and direct API calls are never accidentally routed through a proxy.
+
+session
+The session module defines the conversation data model. MessageRole has four variants: System, User, Assistant, and Tool. ContentBlock has three variants: Text, ToolUse, and ToolResult. The Session type provides full JSON serialization for persisting and resuming conversations.
+
+sse
+The sse module implements an incremental Server-Sent Events parser. The SseParser type exposes push_chunk for feeding in raw bytes as they arrive from the HTTP response stream, and finish to signal end-of-stream and flush any remaining buffered event. This design allows the streaming pipeline to process events as they arrive without waiting for the full response.
+
+usage
+The usage module tracks token consumption and cost. It defines ModelPricing with per-million-token rates:
+
+Model Input (per 1M tokens)   Output (per 1M tokens)
+Sonnet      $15   $75
+Haiku $1    $5
+Opus  $15   $75
+The TokenUsage type accumulates input and output token counts across a session, and format_usd converts the running total into a human-readable dollar amount.
+
+The tools Crate: 19 Tool Specifications
+The tools crate defines the complete tool registry available to the agent. Each of the 19 tool specs includes a full JSON schema describing its parameters, a description used in the system prompt, and an implementation wired through a unified execute_tool dispatch function. When the LLM emits a tool-use content block, the runtime looks up the tool name in this registry, validates the arguments against the schema, and calls the corresponding handler.
+
+Tools span the full range of agent capabilities: file reading and writing, code editing with structured patches, glob and grep search, bash command execution, browser automation, and more. The JSON schema definitions ensure that the LLM produces well-formed tool calls that can be validated before execution, reducing the chance of runtime errors from malformed arguments.
+
+The commands Crate: 15 Slash Commands
+The commands crate implements the slash command system. A SlashCommand enum enumerates all 15 available commands, and a parse() function converts raw user input (e.g., /help, /clear, /compact) into the corresponding enum variant. The handle_slash_command function dispatches the parsed command to its handler, which may modify the session state, trigger a special action, or produce output directly.
+
+The compat-harness Crate: TypeScript Compatibility
+The compat-harness crate provides a TypeScript compatibility layer. Since Claw Code is a clean-room reimplementation of the original TypeScript-based Claude Code, this crate bridges the gap during the transition period — allowing certain TypeScript modules to be called from the Rust runtime and vice versa. It serves as the interop boundary that enables incremental migration without requiring a full rewrite to ship.
+
+The rusty-claude-cli Crate: Terminal Binary
+The rusty-claude-cli crate is the final binary that users actually run. It ties together all other crates into a polished terminal experience.
+
+Default Model
+The default model is set to "claude-sonnet-4-20250514", configurable via command-line flags or environment variables.
+
+Terminal Experience
+The CLI uses a braille spinner with 10 animation frames to indicate activity while waiting for LLM responses:
+
+const SPINNER_FRAMES: [&str; 10] = [ "⠙", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏", ];
+Syntax highlighting is powered by syntect with the base16-ocean.dark theme, and Markdown rendering uses pulldown_cmark. The line editor is built on crossterm in raw mode with the following key bindings:
+
+Enter — Submit the current input.
+Shift+Enter — Insert a newline (multi-line editing).
+Ctrl+C / Esc — Cancel the current input.
+OAuth Flow
+The binary includes a full OAuth login/logout flow, leveraging the oauth module from the runtime crate for PKCE challenge generation and token persistence.
+
+Output Formats
+Three output formats are supported: Text (human-readable, the default), Json (structured single-object output), and Ndjson (newline-delimited JSON for streaming consumption by other tools).
+
+Request Lifecycle: End-to-End Data Flow
+Understanding how a single user message travels through the claw code rust runtime clarifies how the crates interact:
+
+The rusty-claude-cli line editor captures user input and passes it to the runtime crate's ConversationRuntime.
+The prompt module builds or updates the system prompt, discovering CLAUDE.md files and applying the instruction character limits.
+The session module appends the user message to the conversation history.
+The conversation module sends the full message list to the api crate via stream_message().
+The api crate constructs the HTTP request, attaches authentication headers, and opens an SSE connection.
+The sse module incrementally parses incoming chunks into StreamEvent variants.
+If the response includes ToolUse content blocks, the conversation module looks up each tool in the tools crate registry.
+The permissions module checks whether each tool call is allowed under the current PermissionPolicy.
+Approved tool calls are executed (e.g., bash module for shell commands, file_ops for file operations).
+Results are appended to the session and the loop repeats (up to 16 iterations).
+When the model emits a final text response without tool calls, the CLI renders it with syntax highlighting and Markdown formatting.
+The usage module updates the running token count and cost estimate.
+Key Design Decisions
+Why a Zero-Dependency JSON Parser?
+The custom JsonValue parser avoids pulling in serde and serde_json, which together add significant compile time and binary size. Since the runtime only needs to parse and produce JSON for the API wire format and tool schemas — not arbitrary Rust struct serialization — a focused parser that handles the exact JSON subset needed is sufficient and keeps the dependency tree minimal.
+
+Why Generic Traits for the Conversation Loop?
+Making ConversationRuntime<C, T> generic over ApiClient and ToolExecutor traits enables testing with mock implementations. The conversation loop logic can be exercised without real HTTP calls or file system side effects, which is critical for a system that executes potentially destructive operations on behalf of the user.
+
+Why Atomic File Writes for Credentials?
+OAuth tokens stored at ~/.claude/credentials.json are written atomically via temp-file rename. If the agent process crashes mid-write, the previous credential file remains intact. This prevents the frustrating scenario where a user must re-authenticate because their credentials file was corrupted by an interrupted write.
+
+Why 12 Bootstrap Phases?
+The bootstrap pipeline is designed for fast startup. Most invocations hit an early "FastPath" exit — for example, FastPathVersion returns the version string without initializing the full runtime, and SystemPromptFastPath reuses a cached prompt when nothing has changed. Only interactive sessions that need the complete conversation loop proceed all the way to MainRuntime.
+
+Related Topics
+Architecture Overview
+Dual-layer Python + Rust design and system architecture
+Tool System
+19 built-in tools with JSON schemas and execution model
+Slash Commands
+15 commands for session control, configuration, and debugging
+Getting Started
+Installation, configuration, and first-run guide
+
+Copy Page
+On This Page
+Workspace Overview
+api Crate
+runtime Crate (16 Modules)
+tools Crate
+commands Crate
+compat-harness Crate
+CLI Binary
+Request Lifecycle
+Design Decisions
+>_ claw-code
+Open-source AI coding agent framework.
+Clean-room Python & Rust rewrite of the Claude Code architecture.
+Documentation
+Architecture
+Tool System
+Commands
+Rust Runtime
+Query Engine
+Platform
+Sessions
+Permissions
+MCP Integration
+API Client
+Resources
+Getting Started
+Claw Code vs Claude Code
+Source Leak Timeline
+Language
+English
+简体中文
+繁體中文(港)
+繁體中文(台)
+한국어
+Claw Code is an independent open-source project. Not affiliated with Anthropic.
+Claude Code is a trademark of Anthropic, PBC.
+
+GitHub
+llms.txt
+Sitemap
+
+
+>_ claw-code
+Architecture
+Tools
+Commands
+Rust Runtime
+Getting Started
+GitHub
+English
+Home› Query Engine
+Query Engine
+Claw Code Query Engine: How the AI Agent Orchestrates Conversations
+The claw code query engine is the stateful conversation orchestrator at the heart of the agent harness. It manages turn limits, token budgets, streaming output, message compaction, and session persistence — ensuring that multi-turn AI coding sessions remain coherent, efficient, and recoverable.
+
+Documentation
+Architecture
+Tool System
+Commands
+Rust Runtime
+Query Engine
+Sessions
+Permissions
+MCP Integration
+API Client
+Resources
+Getting Started
+Comparison
+Leak Timeline
+QueryEngineConfig
+The claw code query engine is configured through a QueryEngineConfig dataclass that controls the core behavioral limits of every conversation session. The default configuration values are tuned for practical coding workflows:
+
+class QueryEngineConfig: max_turns: int = 8 max_budget_tokens: int = 2000 compact_after_turns: int = 12 structured_output: bool = False structured_retry_limit: int = 2
+max_turns caps the number of agent turns per submit_message call at 8, preventing runaway tool-use loops. max_budget_tokens sets a hard ceiling of 2,000 tokens on total output generation per submission. compact_after_turns triggers automatic message compaction after 12 accumulated turns, keeping the context window manageable. structured_output controls whether the engine expects a structured JSON response, and structured_retry_limit allows up to 2 retries when structured output parsing fails.
+
+TurnResult
+Each turn in the claw code query engine produces a TurnResult that captures everything that happened during that turn. The structure contains seven fields:
+
+prompt — the input message that initiated the turn
+output — the agent's generated response text
+matched_commands — any slash commands (like /compact or /clear) that were detected and executed
+matched_tools — the tools that the agent invoked during this turn
+permission_denials — any tool invocations that were blocked by the permission system
+usage — a UsageSummary containing input and output token counts
+stop_reason — why the turn ended: completed, max_turns_reached, or max_budget_reached
+The stop_reason field is critical for the caller to understand whether the agent finished naturally or was cut short. When max_turns_reached fires, the agent may have been mid-task and the caller can decide whether to continue with another submission. When max_budget_reached fires, the session has consumed its allocated token budget.
+
+QueryEnginePort
+The QueryEnginePort is the stateful engine instance that manages a complete conversation session. It maintains several pieces of mutable state:
+
+session_id — a UUID hex string that uniquely identifies this session across restarts
+mutable_messages — the live message history that grows with each turn
+permission_denials — accumulated list of tools the agent tried to use but was blocked from
+total_usage — running token usage totals across all turns in this session
+transcript_store — a TranscriptStore instance that persists the conversation for replay and audit
+The engine is created through two factory methods. from_workspace() creates a fresh session bootstrapped from the current workspace context (discovering CLAUDE.md files, scanning for project structure, assembling the tool pool). from_saved_session(session_id) restores a previously persisted session, rehydrating the message history, usage counters, and transcript from the .port_sessions/ directory.
+
+Session Identity
+The session_id is a UUID hex string (32 characters, no dashes). This compact format is used in file paths and API headers, making sessions easy to reference and store without path-separator issues.
+
+submit_message and Streaming
+The primary entry point is submit_message, which takes a user message and runs the agent through a multi-turn loop. On each iteration, the engine sends the accumulated messages to the model, processes the response (executing any tool calls), appends the results to mutable_messages, and checks the stopping conditions. The loop terminates when one of three conditions is met:
+
+completed — the agent produced a final response without requesting any tool calls
+max_turns_reached — the turn counter hit max_turns (default 8)
+max_budget_reached — cumulative output tokens exceeded max_budget_tokens (default 2,000)
+For real-time output, stream_submit_message wraps the same logic in a generator that yields incremental dictionaries. The stream events follow a defined protocol:
+
+# Stream event types "message_start" # New assistant message beginning "command_match" # Slash command detected and executed "tool_match" # Tool invocation started "permission_denial" # Tool blocked by permission system "message_delta" # Incremental text chunk "message_stop" # Turn completed with stop_reason
+This streaming protocol enables responsive UIs that show tool invocations, permission denials, and text generation in real time as they occur, rather than waiting for the entire turn to complete.
+
+Message Compaction
+Long-running sessions accumulate messages that eventually threaten to overflow the model's context window. The claw code query engine handles this through automatic compaction via the compact_messages_if_needed method.
+
+When the accumulated message count exceeds compact_after_turns (default 12), the engine trims the history to retain only the last compact_after_turns messages. Older messages are summarized into a compact system message that preserves key context — file paths, decisions made, and ongoing work — without the full verbatim history.
+
+The compaction process strips analysis tags, collects key file references, and generates a concise summary that fits within the model's context budget. This automatic trimming means sessions can run for dozens or hundreds of turns without manual intervention.
+
+Session Persistence
+The persist_session method flushes the current session state to disk. It writes the transcript to the TranscriptStore and saves session metadata (message history, usage counters, session ID) to the .port_sessions/ directory. This enables two key workflows:
+
+Session resume — restoring a session after a crash, network interruption, or intentional pause using from_saved_session(session_id)
+Audit trail — reviewing what the agent did, what tools it invoked, and what permissions were denied during a completed session
+Runtime Integration
+The query engine does not operate in isolation — it is integrated with the broader claw code runtime through two key components:
+
+PortRuntime.route_prompt tokenizes the incoming prompt and scores it against routing rules, determining how the message should be handled (direct response, tool-augmented response, or delegation to a sub-agent). The bootstrap_session method assembles the full context — system prompt, CLAUDE.md instructions, tool definitions, and workspace metadata — before the first turn begins.
+
+Rust ConversationRuntime<C,T> provides a native alternative for high-performance scenarios. It is generic over two traits: ApiClient (the model interface) and ToolExecutor (the tool dispatch layer). The Rust runtime enforces a max_iterations limit of 16 and runs a tight tool-use loop: send messages to the model, parse tool-use blocks from the response, execute tools, append results, repeat until the model produces a final answer or hits the iteration cap.
+
+TranscriptStore
+The TranscriptStore is the in-memory persistence layer for conversation history. It provides four operations:
+
+append — adds a new message (user, assistant, or tool result) to the transcript
+compact(keep_last=10) — trims the transcript to the most recent 10 entries, discarding older history
+replay — returns the full transcript as a tuple for session restoration
+flush — persists the in-memory transcript to disk, clearing the write buffer
+The compact method with its keep_last=10 default provides a secondary compaction layer independent of the query engine's compact_after_turns setting. This two-tier approach ensures that both the model's context window (managed by the engine) and the persistent storage (managed by the transcript store) remain bounded.
+
+Architecture Connection
+The query engine sits at the center of the claw code architecture, bridging the user-facing CLI, the model API, the tool system, and the session persistence layer. Understanding the query engine is essential for understanding how the entire agent harness operates.
+
+Related Topics
+Claw Code Architecture
+Full system architecture overview
+Tool System
+19 built-in tools powering the agent
+Session Management
+Persistence, memory, and compaction details
+Slash Commands
+15 interactive commands for agent control
+
+Copy Page
+On This Page
+QueryEngineConfig
+TurnResult
+QueryEnginePort
+submit_message
+Message Compaction
+Session Persistence
+Runtime Integration
+TranscriptStore
+>_ claw-code
+Open-source AI coding agent framework.
+Clean-room Python & Rust rewrite of the Claude Code architecture.
+Documentation
+Architecture
+Tool System
+Commands
+Rust Runtime
+Query Engine
+Platform
+Sessions
+Permissions
+MCP Integration
+API Client
+Resources
+Getting Started
+Claw Code vs Claude Code
+Source Leak Timeline
+Language
+English
+简体中文
+繁體中文(港)
+繁體中文(台)
+한국어
+Claw Code is an independent open-source project. Not affiliated with Anthropic.
+Claude Code is a trademark of Anthropic, PBC.
+
+GitHub
+llms.txt
+Sitemap
+
+
+>_ claw-code
+Architecture
+Tools
+Commands
+Rust Runtime
+Getting Started
+GitHub
+English
+Home› Session Management
+Session Management
+Claw Code Session Management: Persistence, Memory, and Compaction
+The claw code session management system handles everything between turns — persisting conversations to disk, compacting message history to fit context windows, storing transcripts for replay, and discovering workspace context to build the agent's system prompt.
+
+Documentation
+Architecture
+Tool System
+Commands
+Rust Runtime
+Query Engine
+Sessions
+Permissions
+MCP Integration
+API Client
+Resources
+Getting Started
+Comparison
+Leak Timeline
+Session Store
+The Python-side session store is built around the StoredSession dataclass, which captures the minimal state needed to fully restore a conversation. Each stored session contains four fields:
+
+class StoredSession: session_id: str messages: tuple # immutable snapshot of message history input_tokens: int output_tokens: int
+Sessions are serialized to JSON and saved to .port_sessions/{session_id}.json. The messages field is stored as a tuple (not a list) to enforce immutability of the persisted snapshot — the live session continues to mutate its own message list, but the saved state is frozen at the point of persistence.
+
+Rust Session Model
+The Rust layer defines its own session type with stronger type guarantees. A Rust Session contains a version field (u32) for schema migration and a messages field (Vec<ConversationMessage>) that holds the full conversation history. Two methods handle persistence: save_to_path serializes to JSON and writes to disk, while load_from_path deserializes and validates the schema version.
+
+Message Roles and Content Blocks
+Every message in a claw code session is tagged with a MessageRole enum that identifies the speaker:
+
+System — instructions, context, and configuration injected by the harness
+User — messages from the human operator
+Assistant — responses generated by the AI model
+Tool — results returned from tool executions
+Message content is represented as an array of ContentBlock variants. The Rust implementation defines three variants:
+
+enum ContentBlock { Text { text: String }, ToolUse { id: String, name: String, input: Value }, ToolResult { tool_use_id: String, tool_name: String, output: String, is_error: bool, }, }
+Text blocks carry plain text content. ToolUse blocks represent the agent's decision to invoke a tool, with a unique id for correlation, the tool name, and the JSON input payload. ToolResult blocks carry the tool's response back to the model, linked to the originating tool use via tool_use_id, and include an is_error flag that tells the model whether the tool succeeded or failed.
+
+Compaction System
+The claw code compaction system prevents context window overflow in long-running sessions. It is governed by a CompactionConfig with two key parameters:
+
+struct CompactionConfig { preserve_recent_messages: usize, // default: 4 max_estimated_tokens: usize, // default: 10000 }
+The should_compact function checks two conditions: whether the message count exceeds a threshold, and whether the estimated token count exceeds max_estimated_tokens. Token estimation uses a heuristic of approximately 4 characters per token — simple but effective for deciding when compaction is needed.
+
+When compaction triggers, compact_session preserves the most recent 4 messages (configurable via preserve_recent_messages) and replaces everything older with a single system message summary. The format_compact_summary function generates this summary by:
+
+Stripping <analysis> tags from the conversation history
+Collecting key file references (filtering for extensions: rs, ts, tsx, js, json, md)
+Inferring pending_work and current_work from the conversation context
+Truncating the summary at 160 characters to keep it compact
+Token Estimation
+The ~4 characters per token heuristic is intentionally conservative. It over-estimates for code (which is denser) and under-estimates for prose, but the compaction trigger is a soft threshold — a few hundred tokens of inaccuracy does not affect correctness.
+
+TranscriptStore
+The TranscriptStore is an in-memory buffer that accumulates conversation entries before flushing them to persistent storage. It provides four operations:
+
+append — adds a new entry (message, tool result, or system event) to the buffer
+compact(keep_last=10) — trims the buffer to the 10 most recent entries
+replay — returns the full buffer contents as a tuple for session restoration
+flush — writes the buffer to disk and clears it
+The replay method returns a tuple (not a list) to prevent accidental mutation of the replayed history. The compact method with keep_last=10 provides a separate compaction boundary from the main engine's compact_after_turns setting, ensuring the transcript store does not grow unbounded even if the engine's compaction is configured aggressively.
+
+History Logging
+Alongside the raw transcript, the claw code session system maintains a structured history log via HistoryEvent and HistoryLog. Each HistoryEvent has two fields: title (a short summary like "Edited main.rs") and detail (longer context about what changed and why). The HistoryLog class provides add (to append events) and as_markdown (to render the log as a readable markdown document for inclusion in prompts or reports).
+
+Context Discovery
+Before the first turn of a session, the claw code harness discovers workspace context through the PortContext dataclass. This context informs the system prompt and helps the agent understand the project it is working in:
+
+class PortContext: source_root: Path tests_root: Path assets_root: Path archive_root: Path python_file_count: int test_file_count: int asset_file_count: int archive_available: bool
+The context scanner counts Python files, test files, and asset files to give the agent a quick sense of project scale and structure. The archive_available flag indicates whether archived session data exists for potential reference. The permission context is also established during this discovery phase.
+
+System Prompt Assembly
+The system prompt is the foundation of every claw code session. It is assembled by discovering and merging instruction files from the project hierarchy. The discovery process walks the ancestor directory chain looking for three specific files:
+
+CLAUDE.md — project-level instructions checked into version control
+CLAUDE.local.md — local overrides not checked into version control
+.claude/CLAUDE.md — instructions in the .claude configuration directory
+Two hard limits prevent instruction files from overwhelming the context window:
+
+MAX_INSTRUCTION_FILE_CHARS = 4,000 — no single instruction file can exceed 4,000 characters
+MAX_TOTAL_INSTRUCTION_CHARS = 12,000 — the combined instruction content across all discovered files is capped at 12,000 characters
+A content hash deduplication step ensures that identical instruction content discovered at multiple levels of the directory hierarchy is only included once. This prevents redundancy when, for example, a monorepo has the same CLAUDE.md symlinked in multiple subdirectories.
+
+Instruction Priority
+Instruction files discovered closer to the working directory take priority over those found in parent directories. The content hash dedup ensures this does not result in duplicate instructions, while the character limits prevent deeply nested monorepos from exceeding the token budget.
+
+Related Topics
+Claw Code Architecture
+Full system architecture overview
+Query Engine
+Conversation orchestration and turn management
+Permission System
+How tool access is controlled and enforced
+Getting Started
+Installation and first session walkthrough
+
+Copy Page
+On This Page
+Session Store
+Rust Session Model
+Message Types
+Compaction System
+TranscriptStore
+History Logging
+Context Discovery
+System Prompt Assembly
+>_ claw-code
+Open-source AI coding agent framework.
+Clean-room Python & Rust rewrite of the Claude Code architecture.
+Documentation
+Architecture
+Tool System
+Commands
+Rust Runtime
+Query Engine
+Platform
+Sessions
+Permissions
+MCP Integration
+API Client
+Resources
+Getting Started
+Claw Code vs Claude Code
+Source Leak Timeline
+Language
+English
+简体中文
+繁體中文(港)
+繁體中文(台)
+한국어
+Claw Code is an independent open-source project. Not affiliated with Anthropic.
+Claude Code is a trademark of Anthropic, PBC.
+
+GitHub
+llms.txt
+Sitemap
+
+
+>_ claw-code
+Architecture
+Tools
+Commands
+Rust Runtime
+Getting Started
+GitHub
+English
+Home› Permissions
+Permission System
+Claw Code Permission System: Securing AI Agent Tool Access
+The claw code permission system provides per-tool granularity over what an AI agent can and cannot do. It spans two layers — a Python deny-list mechanism for fast filtering and a Rust policy engine for fine-grained control — ensuring that tools are never exposed without explicit authorization.
+
+Documentation
+Architecture
+Tool System
+Commands
+Rust Runtime
+Query Engine
+Sessions
+Permissions
+MCP Integration
+API Client
+Resources
+Getting Started
+Comparison
+Leak Timeline
+Python ToolPermissionContext
+The Python-side permission system centers on the ToolPermissionContext dataclass, which carries two fields for blocking tools:
+
+class ToolPermissionContext: deny_names: frozenset[str] # exact tool names to block deny_prefixes: tuple[str, ...] # prefix patterns to block
+deny_names is a frozenset of exact tool names that should be blocked. deny_prefixes is a tuple of string prefixes — any tool whose name starts with a listed prefix is blocked. Both fields are constructed via the from_iterables class method, which lowercases all entries to ensure case-insensitive matching.
+
+The blocking check is implemented in the blocks() method:
+
+def blocks(self, tool_name: str) -> bool: name_lower = tool_name.lower() if name_lower in self.deny_names: return True return any( name_lower.startswith(prefix) for prefix in self.deny_prefixes )
+The method first checks for an exact match against deny_names, then checks whether the lowercased tool name starts with any entry in deny_prefixes. This two-stage check is efficient: the frozenset lookup is O(1), and the prefix scan is O(n) over a typically small prefix list.
+
+Rust Permission Model
+The Rust layer implements a richer permission model with three distinct modes:
+
+enum PermissionMode { Allow, // tool is always permitted Deny, // tool is always blocked Prompt, // user is asked for each invocation }
+The Prompt mode is the key differentiator from the Python layer. Instead of a binary allow/deny decision, the Rust permission system can pause execution and ask the user whether to allow a specific tool invocation. This is mediated through the PermissionPrompter trait:
+
+struct PermissionRequest { tool_name: String, input: String, } enum PermissionPromptDecision { Allow, Deny { reason: String }, } trait PermissionPrompter { fn decide(&mut self, request: PermissionRequest) -> PermissionPromptDecision; }
+The PermissionRequest includes both the tool name and the full input string, so the user can make an informed decision about whether to allow the specific operation. The PermissionPromptDecision enum includes an optional reason on denial, which is fed back to the model so it can understand why its tool use was rejected.
+
+PermissionPolicy
+The PermissionPolicy struct ties everything together. It defines a default_mode (applied to any tool without a specific override) and a tool_modes map (BTreeMap<String, PermissionMode>) for per-tool overrides:
+
+struct PermissionPolicy { default_mode: PermissionMode, tool_modes: BTreeMap<String, PermissionMode>, }
+The policy is constructed with new(default_mode) and customized with with_tool_mode(tool_name, mode) for individual tools. The mode_for(tool_name) method looks up the specific mode for a tool, falling back to the default if no override exists.
+
+The authorize(tool_name, input, prompter) method executes the full authorization flow:
+
+Look up the mode for the tool via mode_for
+If Allow, return PermissionOutcome::Allow immediately
+If Deny, return PermissionOutcome::Deny with a static reason
+If Prompt, construct a PermissionRequest and call prompter.decide()
+Map the prompter's decision to a PermissionOutcome
+The PermissionOutcome enum mirrors the decision types: Allow or Deny{reason}. This separation between policy (what mode applies) and prompting (how the user is asked) keeps the system testable — in tests, the prompter can be a mock that always allows or always denies.
+
+CLI Permission Modes
+The CLI exposes three preset permission modes via args.rs, providing convenient defaults for common command-line use cases:
+
+ReadOnly — the agent can read files and search but cannot write, execute commands, or modify anything. This is the safest mode for exploratory sessions.
+WorkspaceWrite (default) — the agent can read and write files within the workspace, execute sandboxed commands, and use most tools. This is the standard mode for development work.
+DangerFullAccess — all permission checks are bypassed. The agent can execute arbitrary commands, write to any path, and use all tools without prompting. This mode is intended for trusted automation pipelines only.
+Default Mode
+WorkspaceWrite is the default for a reason — it provides enough capability for real development work while keeping the sandbox boundary intact. ReadOnly is useful for code review and exploration. DangerFullAccess should only be used in controlled environments where the agent is trusted.
+
+Tool Filtering
+Permission filtering happens before tools reach the agent's context window. The get_tools function accepts a permission_context parameter and calls filter_tools_by_permission_context to remove any blocked tools from the list. This ensures that denied tools are never described in the system prompt — the agent literally does not know they exist.
+
+This design is more secure than post-hoc enforcement. If a blocked tool appeared in the prompt but was rejected at execution time, the agent would waste turns attempting to use it and might try to work around the restriction. By filtering at the prompt level, the agent's decision-making is constrained to only the tools it can actually use.
+
+Simple Mode
+Simple mode is the most restrictive tool configuration. When enabled, the tool pool is reduced to exactly three tools:
+
+BashTool — shell command execution
+FileReadTool — file reading
+FileEditTool — file editing
+All other tools — web access, sub-agents, search, notebooks, task management — are removed. This provides a minimal, predictable surface area for constrained environments where the full 19-tool suite would be excessive.
+
+Runtime Permission Inference
+The runtime layer adds a final permission check via _infer_permission_denials. This function gates bash-like tools (any tool that can execute arbitrary commands) based on the active CLI permission mode. Even if a tool passes the ToolPermissionContext filter, the runtime inference layer can still block it based on the broader session permissions.
+
+This layered approach — Python deny-list filtering, Rust policy engine, CLI mode presets, and runtime inference — creates defense in depth. Each layer catches cases the others might miss, ensuring that the claw code permission system is robust against configuration errors and edge cases.
+
+Security Model Summary
+The claw code permission system provides per-tool granularity through four layers: Python deny lists (fast filtering), Rust permission policies (fine-grained control with prompting), CLI mode presets (convenient defaults), and runtime inference (final gating). Tools blocked at any layer never reach the agent.
+
+Related Topics
+Tool System
+19 built-in tools controlled by permissions
+Claw Code Architecture
+Full system architecture overview
+Session Management
+Persistence, memory, and compaction
+Slash Commands
+15 interactive commands for agent control
+
+Copy Page
+On This Page
+Python ToolPermissionContext
+Rust Permission Model
+PermissionPolicy
+CLI Permission Modes
+Tool Filtering
+Simple Mode
+Runtime Inference
+>_ claw-code
+Open-source AI coding agent framework.
+Clean-room Python & Rust rewrite of the Claude Code architecture.
+Documentation
+Architecture
+Tool System
+Commands
+Rust Runtime
+Query Engine
+Platform
+Sessions
+Permissions
+MCP Integration
+API Client
+Resources
+Getting Started
+Claw Code vs Claude Code
+Source Leak Timeline
+Language
+English
+简体中文
+繁體中文(港)
+繁體中文(台)
+한국어
+Claw Code is an independent open-source project. Not affiliated with Anthropic.
+Claude Code is a trademark of Anthropic, PBC.
+
+GitHub
+llms.txt
+Sitemap
+
+
+>_ claw-code
+Architecture
+Tools
+Commands
+Rust Runtime
+Getting Started
+GitHub
+English
+Home› MCP Integration
+MCP Integration
+Claw Code MCP Integration: Model Context Protocol Support
+The claw code framework provides first-class support for the Model Context Protocol (MCP) — a standard protocol for connecting AI agents to external tools and data sources. MCP integration spans 6 transport types, deterministic tool naming, OAuth authentication, and multi-source configuration discovery.
+
+Documentation
+Architecture
+Tool System
+Commands
+Rust Runtime
+Query Engine
+Sessions
+Permissions
+MCP Integration
+API Client
+Resources
+Getting Started
+Comparison
+Leak Timeline
+What Is MCP?
+MCP (Model Context Protocol) is a standard protocol for connecting AI agents to external tools, data sources, and services. Rather than hard-coding integrations, MCP provides a uniform interface that allows any compliant server to expose tools that the claw code agent can discover and invoke at runtime. This makes the agent's capabilities extensible without modifying the core codebase.
+
+6 Transport Types
+The claw code MCP integration supports six transport types, defined in the McpTransport enum in the runtime crate's config.rs. Each transport maps to a specific McpServerConfig variant:
+
+Stdio — launches a local process and communicates via stdin/stdout. Configured with McpStdioServerConfig: command (the executable), args (command-line arguments), and env (environment variables).
+SSE (Server-Sent Events) — connects to a remote HTTP endpoint using server-sent events for streaming. Configured with McpRemoteServerConfig: url, headers, headers_helper, and optional oauth.
+HTTP — standard HTTP request/response communication. Uses the same McpRemoteServerConfig as SSE.
+WebSocket (Ws) — bidirectional communication over WebSocket. Uses McpRemoteServerConfig.
+SDK — in-process integration using the MCP SDK directly, without network transport.
+ClaudeAiProxy — a proxy transport for claude.ai-hosted MCP servers.
+enum McpTransport { Stdio, Sse, Http, Ws, Sdk, ClaudeAiProxy, }
+The McpStdioServerConfig is the most common transport for local tools — it spawns a subprocess and pipes JSON messages through stdin/stdout. The remote transports (Sse, Http, Ws) share the McpRemoteServerConfig structure, which includes URL, custom headers, and optional OAuth configuration.
+
+OAuth Configuration
+Remote MCP servers can require OAuth authentication. The McpOAuthConfig struct captures the necessary parameters:
+
+struct McpOAuthConfig { client_id: String, callback_port: u16, auth_server_metadata_url: Option<String>, xaa: Option<String>, }
+The client transport layer wraps this in McpClientAuth, which is either None or OAuth(McpOAuthConfig). The requires_user_auth() method checks whether the OAuth configuration requires an interactive browser-based authorization flow.
+
+Tool Naming Conventions
+MCP tools follow strict naming conventions to avoid collisions with built-in tools and between different MCP servers:
+
+normalize_name_for_mcp — replaces all non-alphanumeric characters with underscores and collapses consecutive underscores. This produces clean, identifier-safe names.
+mcp_tool_prefix — returns mcp__{normalized}__ where normalized is the server name after normalization. The double underscores create a clear namespace boundary.
+mcp_tool_name — returns the fully qualified tool name by combining the prefix with the tool's own name.
+For claude.ai-hosted servers, the prefix constant CLAUDEAI_SERVER_PREFIX is set to "claude.ai " (note the trailing space). This distinguishes claude.ai MCP servers from user-configured ones in tool listings and logs.
+
+Naming Example
+A server named "my-database" with a tool called "query" would produce the normalized name my_database, the prefix mcp__my_database__, and the fully qualified tool name mcp__my_database__query.
+
+Server Signatures and Hashing
+Each MCP server is assigned a deterministic signature via mcp_server_signature. This signature is used for deduplication — if the same server is configured in multiple settings files, the signature ensures it is only connected once.
+
+Configuration hashing uses the scoped_mcp_config_hash function, which implements FNV-1a (Fowler-Noll-Vo) hashing with the standard 64-bit offset basis of 0xcbf29ce484222325. FNV-1a was chosen for its simplicity, speed, and good distribution properties — it produces consistent hashes without requiring a cryptographic hash function.
+
+McpClientBootstrap
+When the claw code harness starts, each configured MCP server is bootstrapped through the McpClientBootstrap struct:
+
+struct McpClientBootstrap { server_name: String, normalized_name: String, tool_prefix: String, signature: String, transport: McpClientTransport, }
+The from_scoped_config constructor builds the bootstrap from a settings entry, normalizing the name, computing the prefix and signature, and resolving the transport type. The McpClientTransport enum mirrors the server-side McpTransport with six variants: Stdio, Sse, Http, WebSocket, Sdk, and ClaudeAiProxy.
+
+CCR Proxy Handling
+The claw code MCP integration includes special handling for CCR (Claude Code Runtime) proxy URLs. The unwrap_ccr_proxy_url function extracts the real URL from proxy wrappers, using CCR_PROXY_PATH_MARKERS to identify and strip proxy path segments. This allows the system to connect to the actual MCP server endpoint even when the URL has been wrapped by an intermediary proxy layer.
+
+Configuration Discovery
+MCP server configurations are discovered from three sources, merged in order of increasing specificity:
+
+User config — ~/.claude/settings.json — global MCP servers available in all projects
+Project config — .claude/settings.json — project-specific servers checked into version control
+Local config — .claude/settings.local.json — local overrides not checked into version control
+The three sources are merged using a deep merge strategy. Local config overrides project config, which overrides user config. This allows teams to define shared MCP servers in the project config while individual developers can add personal servers or override connection parameters in the local config.
+
+Config Precedence
+The deep merge means that if a server with the same name appears in multiple config sources, the most specific one wins. Server signatures ensure that duplicate entries (same server configured at multiple levels) are connected only once.
+
+Related Topics
+Tool System
+19 built-in tools and tool pool assembly
+Claw Code Architecture
+Full system architecture overview
+Rust Runtime
+Native Rust conversation runtime
+Permission System
+How MCP tool access is controlled
+
+Copy Page
+On This Page
+What Is MCP?
+6 Transport Types
+OAuth Configuration
+Tool Naming
+Server Signatures
+McpClientBootstrap
+CCR Proxy
+Config Discovery
+>_ claw-code
+Open-source AI coding agent framework.
+Clean-room Python & Rust rewrite of the Claude Code architecture.
+Documentation
+Architecture
+Tool System
+Commands
+Rust Runtime
+Query Engine
+Platform
+Sessions
+Permissions
+MCP Integration
+API Client
+Resources
+Getting Started
+Claw Code vs Claude Code
+Source Leak Timeline
+Language
+English
+简体中文
+繁體中文(港)
+繁體中文(台)
+한국어
+Claw Code is an independent open-source project. Not affiliated with Anthropic.
+Claude Code is a trademark of Anthropic, PBC.
+
+GitHub
+llms.txt
+Sitemap
+
+>_ claw-code
+Architecture
+Tools
+Commands
+Rust Runtime
+Getting Started
+GitHub
+English
+Home› API Client
+Rust Crate Deep Dive
+Claw Code API Client: LLM Provider Integration and Streaming
+A complete technical reference for the claw code API client crate — the Rust layer responsible for all communication with the Anthropic Messages API, including authentication, streaming, retry logic, OAuth, and the full request/response type system.
+
+Documentation
+Architecture
+Tool System
+Commands
+Rust Runtime
+Query Engine
+Sessions
+Permissions
+MCP Integration
+API Client
+Resources
+Getting Started
+Comparison
+Leak Timeline
+The claw code API client lives in rust/crates/api/src/client.rs and serves as the sole interface between the agent runtime and the Anthropic LLM backend. It wraps a reqwest::Client with authentication, base URL configuration, and a configurable retry policy. Every message sent to and received from the Claude API flows through this crate.
+
+AnthropicClient
+The AnthropicClient struct is the central type. It holds the HTTP client, authentication source, base URL, and retry configuration. Two primary methods handle all API communication:
+
+send_message(request) — Non-streaming call. Sends a MessageRequest and returns a fully materialized MessageResponse.
+stream_message(request) — Streaming call. Returns a MessageStream that wraps the raw reqwest::Response with an SseParser. Call next_event() to yield Option<StreamEvent> values incrementally.
+Constants
+Constant    Value
+DEFAULT_BASE_URL  https://api.anthropic.com
+ANTHROPIC_VERSION 2023-06-01
+DEFAULT_MAX_RETRIES     2
+DEFAULT_INITIAL_BACKOFF 200ms
+DEFAULT_MAX_BACKOFF     2s
+Authentication
+The claw code API client supports multiple authentication modes through the AuthSource enum:
+
+// AuthSource enum enum AuthSource { None, ApiKey(String), BearerToken(String), ApiKeyAndBearer { api_key: String, bearer_token: String }, }
+Two factory methods construct the client from environment state:
+
+from_env() — Reads ANTHROPIC_API_KEY and ANTHROPIC_AUTH_TOKEN from the environment.
+from_env_or_saved() — Also checks for saved OAuth credentials at ~/.claude/credentials.json (or $CLAUDE_CONFIG_HOME/credentials.json).
+OAuth PKCE Flow
+For browser-based authentication, the claw code API client implements the full OAuth PKCE (Proof Key for Code Exchange) flow:
+
+generate_pkce_pair() — Creates a cryptographic code verifier and S256 challenge.
+loopback_redirect_uri(port) — Constructs the redirect URI pointing to a local callback listener.
+The user is directed to the browser for authorization.
+A local server captures the callback with the authorization code.
+exchange_oauth_code(config, request) — Exchanges the code for tokens.
+refresh_oauth_token(config, request) — Refreshes expired tokens.
+Credentials are persisted as an OAuthTokenSet containing access_token, refresh_token, expires_at, and scopes. The save operation uses atomic temp-file rename to prevent corruption.
+
+API Types
+MessageRequest
+The request payload sent to the Messages API:
+
+Field Type  Description
+model String      Model identifier (e.g., claude-sonnet-4-20250514)
+max_tokens  u32   Maximum tokens in the response
+messages    Vec<Message>      Conversation history
+system      Option<String>    System prompt
+tools Option<Vec<Tool>> Available tools for the model
+tool_choice Option<ToolChoice>      Tool selection policy
+stream      bool  Whether to stream the response
+MessageResponse
+Field Type  Description
+id    String      Unique message identifier
+kind  String      Message type
+role  String      Always "assistant"
+content     Vec<OutputContentBlock> Response content blocks (text, tool use)
+model String      Model that generated the response
+stop_reason Option<String>    Why generation stopped
+stop_sequence     Option<String>    The stop sequence that triggered, if any
+usage Usage Token usage metrics
+request_id  Option<String>    Server-assigned request ID
+Streaming and SSE Parsing
+The claw code API client processes streaming responses using Server-Sent Events (SSE). The SseParser handles raw byte chunks from the HTTP response:
+
+push(chunk) — Feed a raw byte chunk into the parser buffer.
+finish() — Signal that the stream has ended.
+parse_frame — Processes event: and data: lines, ignoring ping frames and [DONE] sentinels.
+StreamEvent Enum
+Variant     Description
+MessageStart      Stream opened, includes initial message metadata
+MessageDelta      Message-level updates (stop reason, usage)
+ContentBlockStart New content block beginning
+ContentBlockDelta Incremental content — TextDelta for text, InputJsonDelta for tool input
+ContentBlockStop  Content block complete
+MessageStop Stream complete
+Usage Tracking
+Every response includes a Usage struct that tracks token usage across four dimensions:
+
+Field Description
+input_tokens      Tokens consumed by the input prompt
+cache_creation_input_tokens   Tokens used to create a new cache entry
+cache_read_input_tokens Tokens served from an existing cache entry
+output_tokens     Tokens generated in the response
+The total_tokens() method returns the sum of all four fields.
+
+Retry Policy
+The claw code API client automatically retries failed requests for transient HTTP errors. The following status codes are considered retryable:
+
+// Retryable HTTP status codes 408 // Request Timeout 409 // Conflict 429 // Too Many Requests (rate limit) 500 // Internal Server Error 502 // Bad Gateway 503 // Service Unavailable 504 // Gateway Timeout
+Retries use exponential backoff starting at 200ms, capped at 2 seconds, with a maximum of 2 retry attempts by default.
+
+Error Types
+The ApiError enum covers every failure mode in the API client:
+
+Variant     Description
+MissingApiKey     No API key or token found in environment or saved credentials
+ExpiredOAuthToken OAuth token has expired and refresh failed
+Auth  Authentication rejected by the server (401/403)
+Http  HTTP transport error (connection, DNS, TLS)
+Io    File system I/O error (credential read/write)
+Json  JSON serialization/deserialization error
+Api   API-level error with status, error_type, message, and retryable flag
+RetriesExhausted  All retry attempts failed
+InvalidSseFrame   Malformed SSE frame during streaming
+BackoffOverflow   Backoff calculation overflowed (extremely unlikely)
+Related Topics
+Rust Runtime Core
+High-performance agent execution engine
+Claw Code Architecture
+Dual-layer Python + Rust system design
+Session Management
+Transcript, compaction, and persistence
+Getting Started
+Installation and setup guide
+
+Copy Page
+On This Page
+AnthropicClient
+Authentication
+OAuth PKCE Flow
+API Types
+Streaming and SSE Parsing
+Usage Tracking
+Retry Policy
+Error Types
+>_ claw-code
+Open-source AI coding agent framework.
+Clean-room Python & Rust rewrite of the Claude Code architecture.
+Documentation
+Architecture
+Tool System
+Commands
+Rust Runtime
+Query Engine
+Platform
+Sessions
+Permissions
+MCP Integration
+API Client
+Resources
+Getting Started
+Claw Code vs Claude Code
+Source Leak Timeline
+Language
+English
+简体中文
+繁體中文(港)
+繁體中文(台)
+한국어
+Claw Code is an independent open-source project. Not affiliated with Anthropic.
+Claude Code is a trademark of Anthropic, PBC.
+
+GitHub
+llms.txt
+Sitemap
+
+The design of AI agents has shifted from “black box” complexity toward transparent, file-based systems. Recently, I had the chance to dig into the internals of Claude Code, Anthropic’s new agentic tool. While it isn’t officially open-source, several deep dives into its architecture (before the inevitable DMCA takedowns) revealed a memory management system that is surprisingly elegant, strictly hierarchical, and — most interestingly — devoid of vector databases or RAG.
+
+Get L.J.’s stories in your inbox
+Join Medium for free to get updates from this writer.
+
+Enter your email
+Subscribe
+
+Remember me for faster sign in
+
+Instead of a traditional database, Claude Code treats the File System as Memory, using Markdown files and a trio of specialized sub-agents to maintain context. Here is a breakdown of how this three-layer memory architecture works.
+
+1. Auto-Memory: The Long-Term Repository
+Press enter or click to view image in full size
+
+Claude Code stores long-term memory at ~/.claude/projects/<sanitized-git-root>/memory/. By resolving the canonical git root, it ensures that all worktrees of the same repository share a single memory source.
+
+The Anatomy of a Memory File
+Each memory entry is a standalone .md file. These files use a strict frontmatter format to define the entry:
+
+Name & Description
+Type: Categorized as user, feedback, project, or reference.
+The Index: A file named MEMORY.md acts as a 200-line index. It doesn’t store the actual content but serves as a map. If the index exceeds 200 lines, older entries are truncated.
+The Maintenance Sub-agent
+After every conversation round, the system forks a specialized sub-agent. This agent’s sole job is to extract new insights from the latest messages. To ensure safety, its tools are heavily restricted: it can only use read-only Bash commands and file-system tools (Edit/Write) limited strictly to the memory directory.
+
+2. Agent-Tool Memory: Modular Knowledge
+Beyond the primary “Auto-Memory,” there is Agent-Tool Memory. This is reserved for custom sub-agents defined by the user in .claude/agents/.
+
+
+If you define a security-reviewer agent, it gets its own namespace: .claude/agent-memory/security-reviewer/. This allows specialized agents to accumulate domain-specific experience (like security patterns) without polluting the main project memory. These memories follow a specific scope defined in their frontmatter—ranging from User-level (global) to Project-level (repo-specific) or Local (machine-specific).
+
+3. The Retrieval Mechanism: The “Small Model” Filter
+Claude Code does not cram every memory file into the context window. Instead, it uses a lightweight, structured retrieval process:
+
+Scanning: It scans the frontmatter of all files in the memory directory to generate a list of available insights.
+Reasoning: It sends this list to Claude 3.5 Sonnet with a strict JSON schema and a 256-token limit. The model identifies up to 5 “definitively useful” files.
+Attachment: The contents of these 5 files are injected into the current user message as a <system-reminder>, which the system calls an Attachment.
+Using Sonnet for this “lookup” phase is a deliberate choice. While a smaller model could do it, the system relies on Sonnet’s reasoning to judge relevance, while keeping costs low through extreme output constraints.
+
+4. Session Memory & Compaction: Managing the Context Window
+To prevent “context explosion,” Claude Code runs a parallel system for short-term session tracking.
+
+Session Notes
+This isn’t a post-hoc summary; it’s a living document. Once the session hits 10,000 tokens, a sub-agent begins updating a Markdown template that tracks progress, decisions, and critical context. These notes are updated every 5,000 new tokens, provided at least three tool calls have occurred.
+
+Compaction: The Safety Valve
+When the context window (200k tokens) nears its limit (typically around 180k–190k tokens), the Compaction mechanism triggers:
+
+Path A: If “Session Notes” exist, the system uses them as the summary, keeps the most recent messages, and flushes the rest.
+Path B: If no notes are available, it falls back to the traditional method of calling the API to generate a fresh summary.
+5. Security: The Trade-off of File-Based Memory
+The beauty of this design is its debuggability. You can diff your memory files just like code. However, "File as Memory" requires rigorous path validation. The system must explicitly reject relative paths, UNC paths, and null bytes to prevent a rogue sub-agent from escaping its sandbox and writing to sensitive areas of the OS.
+
+Final Thoughts
+Claude Code proves that you don’t need a complex vector infrastructure to build a high-functioning agent. By combining Markdown storage, strict sub-agent permissions, and hierarchical summarization, they’ve built a system that is transparent, portable, and remarkably robust. It’s a “boring” architecture in the best way possible — prioritizing reliability over hype.
+
+
+
+Digital Thoughts
+
+
+Claude Code’s Source Got Leaked. Here’s What’s Actually Worth Learning.
+512,000 lines of TypeScript. 44 feature flags. Most of the commentary focuses on the drama.
+Pawel Jozefiak
+Apr 01, 2026
+
+
+
+
+I spent a night reading the code and building things from it. Here’s what matters if you’re building AI agent.
+
+What actually leaked (and what didn’t)
+On March 31, 2026, a security researcher noticed something odd about the Claude Code npm package. Version 2.1.88 shipped with a 59.8MB source map file. Source maps are debug artifacts that Bun (the runtime Claude Code uses) generates by default. Someone forgot to add *.map to the .npmignore file. That’s it. A missing line in a config file.
+
+The source map referenced unobfuscated TypeScript files on Anthropic’s Cloudflare R2 bucket. All downloadable. About 1,900 files. 512,000 lines of code. Within hours, the codebase was mirrored across GitHub, reaching 84,000+ stars in under two hours. The fastest-growing repo in GitHub history, for a codebase that wasn’t supposed to be public.
+
+
+
+
+Interactive data
+
+Let me clear up a few things I’ve seen people get wrong about this.
+
+No customer data was exposed. This was source code for the CLI tool, not a database breach. No credentials, no user conversations, no API keys. Anthropic confirmed it was a packaging error.
+
+No model weights were leaked. The code is the software harness around Claude, not the LLM itself. You can’t run your own Claude from this. What you get is the orchestration layer: how Claude Code manages tools, memory, context, permissions, and multi-agent coordination.
+
+This isn’t a security breach in the traditional sense. It’s a build artifact that should have been excluded from the npm package. Embarrassing for Anthropic’s build pipeline, but the kind of mistake any team shipping fast could make. The irony is that the leaked code includes a system called “Undercover Mode” specifically designed to prevent Anthropic employees from accidentally leaking internal details into public repos. It leaked along with everything else.
+
+It wasn’t intentional. I know people are debating this because the timing aligns with April 1 and because Anthropic had a rough PR week (cease-and-desist against the OpenCode project). But the evidence is clear: they’ve been mass-sending DMCA takedowns to GitHub repos, they pulled the npm package, and their Cloudflare R2 bucket was taken down. You don’t do that with a planned release. The strategic roadmap exposure is too costly, especially during IPO preparation. Theo from t3.gg put it well: “if you think this was intentional, I have a couple bridges for sale.”
+
+One theory that makes sense: Anthropic was investigating rate limit issues in Claude Code. Multiple employees had posted about seeing higher rate limit hits than expected. In their attempts to get better error logs from production builds, they may have included the source maps for debugging. Then forgot to exclude them from the npm package. That tracks with how these things usually happen: a debug change that nobody remembers to undo.
+
+A warning if you’re thinking of cloning the leaked repo: The source references internal workspace packages that don’t exist on npm. Someone already registered those package names with a disposable email. If you clone and blindly run npm install, you could be pulling malicious code. Be careful.
+
+Digital Thoughts is all about experiments, testing and AI. If you like that → consider subscribing.
+
+Type your email...
+Subscribe
+What’s inside and why it matters
+I’ve been building my own AI agent for months now. It runs 24/7 on a dedicated Mac Mini. So when this leak dropped, I didn’t read it for the drama. I read it to learn. I spent a night going through the architecture, comparing it to what I’ve built, and pulling out anything useful.
+
+Here’s what matters if you’re building AI agents or want to understand where this technology is actually going.
+
+
+
+
+The three-layer memory system
+This is probably the most important architectural discovery in the leak. Claude Code uses a memory system with three layers:
+
+Core index (MEMORY.md): A lightweight file of pointers, always loaded into context. Each entry is under 150 characters. It’s an index, not the memory itself.
+
+Topic files: Detailed knowledge distributed across separate files, fetched on-demand when the index suggests they’re relevant.
+
+Raw transcripts: Never re-read in full. Only grep’d for specific identifiers when needed.
+
+The key insight is what they call “skeptical memory.” The agent treats its own memory as a hint, not a fact. Before acting on something it remembers, it verifies against the actual codebase. Memory says a function exists? Check first. Memory says a file is at this path? Verify before using it.
+
+This solves context entropy, the gradual degradation of agent performance in long-running sessions. Most agents get worse the longer they run because their context fills up with stale observations. This architecture keeps the active context small (just the index) and only loads what’s needed.
+
+I’ve been running a similar pattern with working memory that rolls over on a schedule and a permanent index that persists across sessions. The leak confirmed this is the right approach. The verification step is something I’m now adding to my own system.
+
+Memory consolidation during idle time (autoDream)
+The leak includes a system called autoDream in the services/autoDream/ directory. It’s a background memory consolidation engine that runs as a forked subagent with read-only access to the project. Three gates must pass before it runs: 24 hours since the last run, at least 5 sessions completed, and a consolidation lock must be available.
+
+When triggered, it runs four phases: orient (scan memory directory), gather (extract new info from logs), consolidate (write and update topic files), and prune (keep total memory under 200 lines and 25KB).
+
+Why this matters for you: if you’re building any agent that runs over multiple sessions, unbounded memory will kill you. Not immediately. Over weeks. Your agent starts referencing things that are no longer true, duplicating observations, and filling context with noise. You need some form of consolidation. autoDream’s approach of forking a read-only subagent is clean because it can’t accidentally corrupt whatever the agent is currently working on.
+
+The tool architecture
+Claude Code defines 40+ discrete tools, each wrapped in permission gates. The biggest file in the leak is Tool.ts at roughly 29,000 lines, defining tool types and permission schemas. Every tool operation goes through a PermissionGate structure for granular access control.
+
+Three things stood out:
+
+File-read deduplication: Before re-reading a file, it checks whether the file has changed since the last read. If not, it skips the read and uses the cached version. Sounds obvious, but most agent setups don’t do this, and the token savings compound fast.
+
+Large result offloading: When a tool produces a massive result (like searching a large codebase), it writes the full result to disk and only passes a preview plus a file reference back to the context. This keeps the context window clean while still making the data available.
+
+CLAUDE.md reinsertion on turn changes: The CLAUDE.md file doesn’t just get loaded once at the start. It gets reinserted into the conversation on every turn change (when the model finishes and the user sends a new message). Not at the top of the history, but right where the new message is sent. This repeated injection keeps the model aligned with your instructions even in long conversations where the original system prompt would have scrolled far out of active context.
+
+If you’re using CLAUDE.md files (and you should be), this last detail matters. Your instructions aren’t a one-time primer. They’re actively re-read throughout the conversation. That’s why well-structured CLAUDE.md files have such a big impact on agent behavior. I wrote about how I structure mine after running 1000+ sessions.
+
+Multi-agent coordination
+The leak reveals Coordinator Mode. One Claude agent acts as a lead, spawning and managing multiple worker agents in parallel. Workers operate in their own isolated contexts with restricted tool permissions. They communicate via XML-structured task notifications and share data through a scratchpad directory. The system prompt for coordinators emphasizes “parallelism is your superpower.”
+
+The clever implementation detail here: sub-agents share the prompt cache. Instead of each worker spinning up with its own context (paying full input token costs), they all share the same context prefix and only branch at the task-specific instruction. This is what makes multi-agent coordination economically viable. Without cache sharing, spinning up five workers means paying five times the input cost. With it, you pay once for the shared context and only pay incrementally for the task-specific parts. That’s probably why Coordinator Mode isn’t released yet. The cost math is still brutal even with this optimization.
+
+This is the same pattern I landed on independently. I built three persistent domain teams with an Opus lead that plans and delegates, and Sonnet specialists that execute. The convergence here is specific: lead agent that plans, specialist workers that execute in parallel, structured communication, verification at the end.
+
+Risk classification
+Actions get labeled LOW, MEDIUM, or HIGH risk. There’s a “YOLO classifier” for fast auto-approval of low-risk operations. Protected files like .gitconfig and .bashrc get special treatment. There’s also a referenced “AFK Mode” that adjusts behavior when the user is away.
+
+Three tiers. Same as what I built. Same reasoning: an autonomous agent needs to know which actions are safe to take alone, which should be flagged, and which need a human in the loop. This one is less a revelation and more a confirmation that the three-tier approach is just the correct default for any agent with real-world access.
+
+Five patterns you can use right now
+Here’s the practical part. These are patterns from the leak that you can apply to your own AI agent setup, whether you’re building something complex or just trying to get more out of Claude Code, Cursor, or any AI coding tool.
+
+1. The blocking budget
+KAIROS (the unreleased always-on daemon in the leak) has a 15-second blocking budget. Any proactive action that would take longer gets deferred. Max 2 proactive messages per window. Reactive messages (responding to user input) bypass the budget entirely.
+
+Why this matters: if you’re running any kind of proactive agent, whether it’s monitoring code, sending notifications, or checking on things, you need rate limiting. Not just “don’t spam.” Structured rate limiting with different rules for proactive versus reactive work. Without it, your agent will eventually send 4 messages in 30 seconds when one would do.
+
+I implemented this the night I read the leak. A simple state file tracks the budget window. Proactive messages get queued and recovered. Reactive messages go through immediately. About 50 lines of Python.
+
+2. Skeptical memory with verification
+Don’t trust your agent’s memory. Make it verify. Every time your agent says “I remember that file X has function Y,” make it check first. Memory is a hint. The codebase is the truth.
+
+This is the single most practical takeaway from the leak. If you’re using CLAUDE.md files, custom system prompts, or any form of persistent context, treat them as suggestions that need verification, not as ground truth. Files get renamed. Functions get deleted. APIs change. Your memory hasn’t.
+
+3. Semantic memory merging
+autoDream doesn’t just delete old memories. It merges related observations, removes logical contradictions, and converts vague insights into concrete facts. If your agent noted “user might prefer X” three months ago and “user confirmed X yesterday,” the old entry should be updated, not kept alongside the new one.
+
+Most memory systems I’ve seen (including my own before this) do time-based cleanup. Old stuff gets archived or deleted. That’s fine for preventing memory bloat, but it doesn’t catch contradictions. Two conflicting observations can coexist for months. Semantic merging resolves that.
+
+I built a version using a local LLM (Qwen 9B running on the Mac Mini) to cluster related entries and merge them during nightly maintenance. A safety cap prevents reducing any section by more than 50% in a single pass. You don’t need to go this far. Even a simple script that groups memory entries by topic and flags potential contradictions would be a step up from pure time-based cleanup.
+
+4. Adversarial verification
+The leaked Coordinator Mode treats verification as a distinct, adversarial phase with its own worker agent. Not “check if this works.” Not a checklist. A separate agent whose job is to try to break what was built.
+
+This is different from testing. Testing asks “does it work?” Adversarial verification asks “how can I break it?” The distinction matters because the agent that built something has a blind spot about its own work. A fresh agent with the explicit prompt “find problems with this” will catch things the builder missed.
+
+I added this to my nightshift process. Before any task gets marked complete, a separate verification agent runs two phases: existence check (does the deliverable actually exist?) and adversarial challenge (try to break it). The results go into a verification log. It’s caught real issues that would have shipped otherwise.
+
+5. Prompt cache awareness
+The source includes a promptCacheBreakDetection.ts file that monitors 14 different cache-break vectors with sticky latches. Things like mode toggles, model changes, context modifications. Each one can invalidate your prompt cache, and cache misses mean you’re paying full price for tokens that could have been cached.
+
+If you’re running many agent sessions per day, cache efficiency directly affects your costs. This one is easy to ignore because you don’t see the waste. But if you track it (which I now do), you’ll likely find that your cache hit rate is lower than you assumed and that specific patterns in your workflow are breaking it.
+
+Related: the source reveals five different compaction strategies for when the context window fills up. If you’ve used Claude Code heavily, you’ve probably hit the moment where it compacts and then loses track of what it was doing. That’s still a hard problem. But knowing they’re actively working on multiple approaches to solve it tells you this is worth investing in for your own long-running agents too.
+
+What I built in one night
+
+
+
+Like this? Subscribe for more! I am “do-guy” first, write later.
+
+Type your email...
+Subscribe
+
+I didn’t just read the leak. I treated it as a learning exercise and built things from it. That same night, I implemented five modules inspired by patterns in the leaked source:
+
+Blocking budget for proactive messages. 15-second window, 2-message max, deferred queue.
+
+Semantic memory consolidation using local LLM to cluster and merge observations during idle time.
+
+Frustration detection via regex pattern matching. 21 patterns, three action tiers (back off, acknowledge, simplify). Fast enough to run on every incoming message.
+
+Prompt cache monitor that tracks hit rates, estimates savings, and alerts when efficiency drops.
+
+Adversarial verification as a formal phase in the nightshift execution loop.
+
+Total time: about 4 hours of reading and building. I already had the foundations (nightshift, memory system, domain teams). These were specific improvements layered on top.
+
+The frustration detection one is worth a note. The leaked code uses regex patterns to detect user frustration. Stuff like “wtf”, “this sucks”, keyword matching. An LLM company using regexes for sentiment analysis. But it makes sense. You don’t burn an LLM inference call on something you can pattern-match in 5 milliseconds. I applied the same logic: 21 patterns, fast evaluation, action suggestions without the overhead of an API call.
+
+What’s not worth your time
+Not everything in the leak is useful. Some of it is Anthropic-specific, some is unreleased for good reasons, and some is just fun but not practical.
+
+Buddy System. A Tamagotchi-style terminal pet. 18 species across rarity tiers, procedural stats like DEBUGGING, PATIENCE, CHAOS. It’s genuinely charming and I kind of love it. But unless you’re Anthropic trying to make a CLI tool feel more personal, you don’t need this.
+
+Undercover Mode. Strips Anthropic attribution from open-source contributions. Specific to their internal workflow where employees use Claude Code on public repos. Not applicable unless you have the same problem (and if you do, you probably already know about it).
+
+Anti-distillation mechanisms. The code injects fake tool definitions into API requests to poison anyone trying to train models on intercepted traffic. It also summarizes reasoning chains before returning them to eavesdroppers. Interesting from a security perspective. Not useful for building agents.
+
+ULTRAPLAN. A mode that offloads complex planning to a remote cloud container running Opus 4.6 for up to 30 minutes. Cool concept. Requires infrastructure you probably don’t have and a use case that doesn’t come up often enough to justify building it.
+
+Native client attestation. API requests include computed hashes that prove they come from legitimate Claude Code binaries. Implemented below the JavaScript runtime in Bun’s native HTTP stack (written in Zig). This is DRM for API calls. Interesting engineering but not something you can or should replicate.
+
+The uncomfortable truth about the harness itself
+
+
+
+Here’s something most coverage of the leak doesn’t mention: Claude Code is not actually a good harness. Not even close.
+
+On terminal bench, Claude Code ranks 39th. There are 38 harness-model pairs that outscore it. If you filter to just Opus, Claude Code is dead last among harnesses. Cursor’s harness gets Opus from a 77% score to 93%. Claude Code gets that same Opus model... 77%. The harness adds nothing.
+
+Even funnier: when you search the leaked source for “open code” (the open-source CLI project Anthropic sent a cease-and-desist to), you find multiple instances of Claude Code referencing Open Code’s source to match its behavior. Things like scrolling implementations. The closed-source project was copying from the open-source one, not the other way around.
+
+So what’s actually valuable here is not the harness code itself. The valuable parts are the architectural patterns underneath: how they handle memory, context management, multi-agent coordination, and the unreleased feature infrastructure. The actual harness? You could build a better one with any of the open-source alternatives as your starting point.
+
+The code quality itself is... fine. When analyzed, it scores about a 7/10. Type safety is solid (only 38 instances of any across 500+ files). Error handling is decent. But there are “god files” with 5,000+ lines each, over a thousand feature flag references scattered across 250 files, environment variable sprawl throughout, and no centralized secret sanitization before logging. The test files weren’t included in the source map (they wouldn’t be), so that skews the assessment, but the codebase has clear tech debt. Lots of specific, actionable TODO comments that look old.
+
+None of this is unusual for a fast-moving product at this scale. But it’s worth knowing before you treat the leaked code as a reference implementation. The patterns are worth studying. The code itself is not the gold standard some people are making it out to be.
+
+The unreleased features that tell you where Claude Code is heading
+The 44 feature flags in the leak paint a picture of what’s coming. KAIROS is the big one: an always-on background agent that acts proactively, maintains daily logs, subscribes to webhooks, and has its own memory consolidation cycle. It’s referenced over 150 times in the source. Expected to roll out soon.
+
+There’s also Voice Mode (push-to-talk interface), Computer Use integration (screenshot capture, click and keyboard input baked into the CLI), and the Coordinator Mode for multi-agent orchestration.
+
+If you’re using Claude Code today, it’s worth knowing that the tool is moving toward being an always-on daemon, not just a CLI you invoke when you need help. The patterns I described above (blocking budgets, memory consolidation, risk tiers) are all infrastructure for that shift.
+
+Digital Thoughts is a reader-supported publication. To receive new posts and support my work, consider becoming a free or paid subscriber.
+
+Type your email...
+Subscribe
+Why this leak is actually good for you
+Most commentary about this leak focuses on what it means for Anthropic. Embarrassment, competitive risk, security implications. That’s valid but not very useful.
+
+What’s useful is that this is the first complete, production-grade AI agent architecture that’s been fully documented in public. Not a research paper. Not a demo. The actual code that runs at $2.5 billion ARR scale. And it confirms that the patterns people in the agent-building community have been discovering independently are structurally correct.
+
+I built an interactive explorer that maps the entire agent loop, all 50+ tools, the architecture systems, and the hidden features. If you want to explore the leaked architecture visually without reading raw TypeScript, start there.
+
+Scheduled autonomous execution. Bounded memory with consolidation. Multi-agent delegation. Risk-based autonomy tiers. Skeptical self-verification. These aren’t clever hacks. They’re convergent solutions to the real problems that show up when you build agents that actually run. I arrived at most of them through trial and error. Seeing the same patterns in a production system with 80% enterprise adoption tells me the foundations are solid.
+
+The barrier to building serious AI agents is lower than the industry suggests. You don’t need a research lab. You need clear thinking about a few specific problems: when should the agent work unsupervised, how should memory stay bounded, when should it delegate, and what actions need a human gate. The answers become obvious once you start building. They stay hidden until you do.
+
+I write about building and running AI agents. Not theory. Systems that run 24/7 on real hardware.
+
+I’ve updated the Claude Code Workshop with these architecture patterns from the leak: blocking budgets, skeptical memory, semantic consolidation, adversarial verification, and cache optimization.
+
+If you already own it, grab the new version. If you don’t, it covers skills, automation, and the patterns that actually stick after months of daily use.
+
+Thanks for reading Digital Thoughts! This post is public so feel free to share it.
+
+Share
+
+
+Subscribe to Digital Thoughts
+By Pawel Jozefiak · Launched 3 years ago
+Practical AI insights from an e-commerce manager who builds agents at night
+Type your email...
+Subscribe
+By subscribing, you agree Substack's Terms of Use, and acknowledge its Information Collection Notice and Privacy Policy.
+44 Likes
+∙
+5 Restacks
+Discussion about this post
+Write a comment...
+Jonatan 
+Apr 1
+
+Good stuff, I was waiting for your angle. The skeptical memory concept is interesting because I already have “Read before assuming - always check file contents before asserting or editing” in my own CLAUDE.md after Claude asserting file contents it hadn’t read. Looks like I was rediscovering a design principle.
+
+Your interactive explorer is the best entry point I’ve seen so far - thanks!
+
+Like (2)
+Reply
+Share
+2 replies by Pawel Jozefiak and others
+John Hilla
+Apr 6
+
+Did I read this correctly Claude is locking down the code and making everyone pay as it disconnects from OpenClaw. They were sweeping 🧹 api disconnects wide over GitHub accidently zapped paying customers in error which was repaired but a cutt off is coming and alerted the web FREE lunch is over.
+
+Like (1)
+Reply
+Share
+9 more comments...
+
+How to Build Your First AI Agent (Basics)
+Six months of mistakes, a real walk-through, and everything I wish someone had told me before I started.
+Apr 7 • Pawel Jozefiak
+
+218
+
+41
+
+31
+
+
+
+How I Structure CLAUDE.md After 1000+ Sessions
+I’ve rewritten this file from scratch four times. Here’s what survived — and what I cut this week.
+Feb 28 • Pawel Jozefiak
+
+158
+
+22
+
+18
+
+
+My $600 Mac Mini Runs a 35B AI Model. Yesterday I Swapped Its Brain.
+Three tiers of local inference on 16GB RAM. Qwen to Gemma. Zero downtime.
+Apr 3 • Pawel Jozefiak
+
+72
+
+14
+
+13
+
+
+Ready for more?
+Type your email...
+Subscribe
+© 2026 Paweł Józefiak · Privacy ∙ Terms ∙ Collection notice
+Start your Substack
+Get the app
+Substack is the home for great culture

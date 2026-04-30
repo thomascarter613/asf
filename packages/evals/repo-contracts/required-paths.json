@@ -1,0 +1,314 @@
+{
+    "schemaVersion": "0.1.0",
+    "contractType": "required-paths",
+    "description": "Required repository paths for the Agentic Software Foundry v1.0 scaffold.",
+    "requiredPaths": [
+    {
+        "id": "repo.required.root-readme",
+        "path": "README.md",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/README.md"
+    },
+    {
+        "id": "repo.required.docs-readme",
+        "path": "docs/README.md",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/README.md"
+    },
+    {
+        "id": "repo.required.foundry-charter",
+        "path": "docs/foundry/00-foundry-charter.md",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/foundry/02-v1-mvp-definition.md"
+    },
+    {
+        "id": "repo.required.system-boundaries",
+        "path": "docs/foundry/01-system-boundaries.md",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/foundry/02-v1-mvp-definition.md"
+    },
+    {
+        "id": "repo.required.v1-mvp-definition",
+        "path": "docs/foundry/02-v1-mvp-definition.md",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/foundry/02-v1-mvp-definition.md"
+    },
+    {
+        "id": "repo.required.frontmatter-standard",
+        "path": "docs/foundry/03-document-versioning-and-frontmatter.md",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/foundry/03-document-versioning-and-frontmatter.md"
+    },
+    {
+        "id": "repo.required.clean-room-policy",
+        "path": "governance/CLEAN_ROOM_POLICY.md",
+        "type": "file",
+        "severity": "required",
+        "source": "governance/PROJECT_CONSTITUTION.md"
+    },
+    {
+        "id": "repo.required.project-constitution",
+        "path": "governance/PROJECT_CONSTITUTION.md",
+        "type": "file",
+        "severity": "required",
+        "source": "governance/PROJECT_CONSTITUTION.md"
+    },
+    {
+        "id": "repo.required.adr-directory",
+        "path": "docs/adr",
+        "type": "directory",
+        "severity": "required",
+        "source": "docs/README.md"
+    },
+    {
+        "id": "repo.required.adr-0001",
+        "path": "docs/adr/ADR-0001-repository-based-context-continuity.md",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/README.md"
+    },
+    {
+        "id": "repo.required.adr-0002",
+        "path": "docs/adr/ADR-0002-clean-room-architecture-and-pattern-adoption.md",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/README.md"
+    },
+    {
+        "id": "repo.required.adr-0003",
+        "path": "docs/adr/ADR-0003-foundry-control-plane.md",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/README.md"
+    },
+    {
+        "id": "repo.required.adr-0004",
+        "path": "docs/adr/ADR-0004-canonical-repository-plus-vector-retrieval.md",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/README.md"
+    },
+    {
+        "id": "repo.required.adr-0005",
+        "path": "docs/adr/ADR-0005-foundry-event-bus-and-notification-router.md",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/README.md"
+    },
+    {
+        "id": "repo.required.adr-0006",
+        "path": "docs/adr/ADR-0006-directive-compiler-and-work-protocols.md",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/README.md"
+    },
+    {
+        "id": "repo.required.adr-0007",
+        "path": "docs/adr/ADR-0007-multi-agent-runtime-and-role-separation.md",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/README.md"
+    },
+    {
+        "id": "repo.required.adr-0008",
+        "path": "docs/adr/ADR-0008-worktree-based-parallel-execution.md",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/README.md"
+    },
+    {
+        "id": "repo.required.adr-0009",
+        "path": "docs/adr/ADR-0009-charon-sdlc-factory-runtime-integration.md",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/README.md"
+    },
+    {
+        "id": "repo.required.adr-0010",
+        "path": "docs/adr/ADR-0010-manifest-driven-project-contracts.md",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/README.md"
+    },
+    {
+        "id": "repo.required.adr-0011",
+        "path": "docs/adr/ADR-0011-work-packet-lifecycle.md",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/README.md"
+    },
+    {
+        "id": "repo.required.adr-0012",
+        "path": "docs/adr/ADR-0012-context-pack-and-handoff-lifecycle.md",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/README.md"
+    },
+    {
+        "id": "repo.required.adr-0013",
+        "path": "docs/adr/ADR-0013-repo-contract-testing.md",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/README.md"
+    },
+    {
+        "id": "repo.required.adr-0014",
+        "path": "docs/adr/ADR-0014-evaluation-harness-for-context-continuity-and-agent-execution.md",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/README.md"
+    },
+    {
+        "id": "repo.required.foundry-root",
+        "path": ".foundry",
+        "type": "directory",
+        "severity": "required",
+        "source": "docs/foundry/02-v1-mvp-definition.md"
+    },
+    {
+        "id": "repo.required.foundry-project-manifest",
+        "path": ".foundry/manifests/foundry.project.json",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/adr/ADR-0010-manifest-driven-project-contracts.md"
+    },
+    {
+        "id": "repo.required.foundry-event-log",
+        "path": ".foundry/events/events.jsonl",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/adr/ADR-0005-foundry-event-bus-and-notification-router.md"
+    },
+    {
+        "id": "repo.required.foundry-routes",
+        "path": ".foundry/router/routes.json",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/adr/ADR-0005-foundry-event-bus-and-notification-router.md"
+    },
+    {
+        "id": "repo.required.foundry-latest-status",
+        "path": ".foundry/state/latest-status.md",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/adr/ADR-0005-foundry-event-bus-and-notification-router.md"
+    },
+    {
+        "id": "repo.required.charon-root",
+        "path": ".charon",
+        "type": "directory",
+        "severity": "required",
+        "source": "docs/adr/ADR-0001-repository-based-context-continuity.md"
+    },
+    {
+        "id": "repo.required.charon-argos-index-manifest",
+        "path": ".charon/argos/index-manifest.json",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/adr/ADR-0004-canonical-repository-plus-vector-retrieval.md"
+    },
+    {
+        "id": "repo.required.charon-query-contract",
+        "path": ".charon/argos/query-contract.json",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/adr/ADR-0004-canonical-repository-plus-vector-retrieval.md"
+    },
+    {
+        "id": "repo.required.context-pack-template",
+        "path": ".charon/daedalus/context-packs/context-pack-template.md",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/adr/ADR-0012-context-pack-and-handoff-lifecycle.md"
+    },
+    {
+        "id": "repo.required.handoff-packet-template",
+        "path": ".charon/daedalus/handoff-packets/handoff-packet-template.md",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/adr/ADR-0012-context-pack-and-handoff-lifecycle.md"
+    },
+    {
+        "id": "repo.required.sdlc-root",
+        "path": ".sdlc",
+        "type": "directory",
+        "severity": "required",
+        "source": "docs/adr/ADR-0006-directive-compiler-and-work-protocols.md"
+    },
+    {
+        "id": "repo.required.work-packet-template",
+        "path": ".sdlc/work-packets/work-packet-template.md",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/adr/ADR-0011-work-packet-lifecycle.md"
+    },
+    {
+        "id": "repo.required.verification-template",
+        "path": ".sdlc/verification/verification-record-template.md",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/adr/ADR-0011-work-packet-lifecycle.md"
+    },
+    {
+        "id": "repo.required.agent-runtime",
+        "path": ".foundry/agents",
+        "type": "directory",
+        "severity": "required",
+        "source": "docs/adr/ADR-0007-multi-agent-runtime-and-role-separation.md"
+    },
+    {
+        "id": "repo.required.worktree-policy",
+        "path": ".foundry/worktrees/worktree-policy.md",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/adr/ADR-0008-worktree-based-parallel-execution.md"
+    },
+    {
+        "id": "repo.required.templates-root",
+        "path": "templates",
+        "type": "directory",
+        "severity": "required",
+        "source": "docs/adr/ADR-0009-charon-sdlc-factory-runtime-integration.md"
+    },
+    {
+        "id": "repo.required.evals-root",
+        "path": "evals",
+        "type": "directory",
+        "severity": "required",
+        "source": "docs/adr/ADR-0014-evaluation-harness-for-context-continuity-and-agent-execution.md"
+    },
+    {
+        "id": "repo.required.repo-contract-manifest",
+        "path": "evals/repo-contracts/repo-contract.manifest.json",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/adr/ADR-0013-repo-contract-testing.md"
+    },
+    {
+        "id": "repo.required.required-paths-contract",
+        "path": "evals/repo-contracts/required-paths.json",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/adr/ADR-0013-repo-contract-testing.md"
+    },
+    {
+        "id": "repo.required.forbidden-paths-contract",
+        "path": "evals/repo-contracts/forbidden-paths.json",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/adr/ADR-0013-repo-contract-testing.md"
+    },
+    {
+        "id": "repo.required.required-manifest-fields-contract",
+        "path": "evals/repo-contracts/required-manifest-fields.json",
+        "type": "file",
+        "severity": "required",
+        "source": "docs/adr/ADR-0013-repo-contract-testing.md"
+    }]
+}

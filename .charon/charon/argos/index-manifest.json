@@ -1,0 +1,22 @@
+{
+    "schemaVersion": "0.1.0",
+    "indexId": "agentic-software-foundry-default",
+    "status": "planned",
+    "canonicalSource": "repository",
+    "vectorStore":
+    {
+        "provider": "stub",
+        "location": "local",
+        "authoritative": false
+    },
+    "chunkingPolicy": ".charon/argos/chunking-policy.md",
+    "rankingPolicy": ".charon/argos/ranking-policy.md",
+    "embeddingPolicy": ".charon/hephaestus/embedding-policy.md",
+    "sourceArtifactManifest": ".charon/hephaestus/source-artifact-manifest.json",
+    "lastIndexedAt": null,
+    "notes": [
+        "The vector index is derived.",
+        "The repository remains authoritative.",
+        "No orphan vectors are allowed."
+    ]
+}

@@ -1,0 +1,48 @@
+Background
+Claude Code is Anthropic’s official AI-powered coding CLI/agent that delegates tasks directly in the terminal, using hooks, background agents, autonomous daemons, and local execution capabilities. The leak stemmed from a packaging error where Bun (the runtime used) generated a full source map by default, and *.map was not excluded in .npmignore or the files field of package.json. The map file referenced a complete ZIP of the original TypeScript sources hosted on Anthropic’s infrastructure.
+
+Components Exposed
+Agent orchestration: LLM API calls, streaming, tool-call loops, retry logic, thinking/review modes, multi-agent coordination.
+Permission and execution layer: Claude Code hooks (auto-executing shell commands/scripts), Model Context Protocol (MCP) integrations, environment variable handling, project-load flows.
+Memory and state: Persistent memory systems, background agents/autonomous daemons.
+Security-related internals: Telemetry analysis, encryption tools, inter-process communication (IPC), OAuth flows, permission logic.
+Hidden/restricted features: 44 feature flags (20+ unshipped), internal API design, system prompts.
+Build and dependency details: Exact npm handling, local execution paths.
+Not exposed: Model weights, safety pipelines, or user data.
+
+Potential Misuse and Security Risks
+The heavy sharing on GitHub (thousands of forks, stars, and mirrors by developers worldwide) turns this into a vector for abuse. Key risks include:
+
+Supply chain attacks via malicious forks and mirrors: Thousands of repositories now host the leaked code or derivatives. Threat actors can (and already are) seeding trojanized versions with backdoors, data exfiltrators, or cryptominers. Unsuspecting users cloning “official-looking” forks risks immediate compromise.
+Amplified exploitation of known vulnerabilities and discovery of new vulnerabilities: Pre-existing flaws (e.g., CVE-2025-59536, CVE-2026-21852, RCE and API key exfiltration via malicious repo configs, hooks, MCP servers, and env vars) are now far easier to weaponize. Threat actors with full source visibility can craft precise malicious repositories or project files that trigger arbitrary shell execution or credential theft simply by cloning/opening an untrusted repo. The exposed hook and permission logic makes silent device takeover more reliable.
+Local environment and developer workstation compromise: Users building or running the leaked code locally introduce unvetted dependencies and execution paths. The leak coincided exactly with a separate malicious Axios npm supply chain attack (RATs published March 31, 00:21–03:29 UTC), creating a perfect storm for anyone updating Claude Code via npm that day.
+
+ThreatLabz discovers “Claude Code leak” lure that distributes Vidar and GhostSocks
+While monitoring GitHub for threats, ThreatLabz came across a “Claude Code leak” repository published by idbzoomh (links located in the IOC section). The repository looks like it’s trying to pass itself off as leaked TypeScript source code for Anthropic’s Claude Code CLI. The README file even claims the code was exposed through a .map file in the npm package and then rebuilt into a working fork with “unlocked” enterprise features and no message limits. 
+
+The repository link appears near the top of Google results for searches like “leaked Claude Code,” which makes it easy for curious users to encounter, as shown in the figure below.
+
+Google search results for leaked Claude Code on GitHub returning a malicious repository.
+Figure 1: Google search results for leaked Claude Code on GitHub returning a malicious repository.
+
+Malicious GitHub repository using the leaked Claude Code source as a lure.
+Figure 2: Malicious GitHub repository using the leaked Claude Code source as a lure.
+
+The malicious ZIP archive in the repository’s releases section is named Claude Code - Leaked Source Code (.7z). The archive includes ClaudeCode_x64.exe, a Rust-based dropper. On execution, the ClaudeCode_x64.exe drops Vidar v18.7 and GhostSocks. Vidar is an information stealer and GhostSocks is used to proxy network traffic. In early March, another security vendor reported a similar campaign where GitHub was being used to deliver the same payload.
+
+The threat actor keeps updating the malicious ZIP archive in short intervals. At the time of analysis, ThreatLabz observed that there were two ZIP archives updated in the releases section in a short timeframe. The figure below shows the first ZIP archive ThreatLabz encountered which was updated about 13 hours ago.
+
+GitHub repository using the Claude Code leak as a lure to distribute malicious ZIP archives.
+Figure 3: GitHub repository using the Claude Code leak as a lure to distribute malicious ZIP archives.
+
+ThreatLabz also identified the same GitHub repository hosted under another account (located in the IOC section) that contains identical code and appears to be committed by the same threat actor, idbzoomh.
+
+Unlike the earlier repository, this one does not include a releases section. The README file displays a prominent “Download ZIP” button. However, it does not link to any compiled binary or an archive and was non-functional at the time of analysis. The figure below shows the repository and non-functional button.
+
+Additional GitHub repository hosting the same Claude Code leak lure with a “Download ZIP” button.
+Figure 4: Additional GitHub repository hosting the same Claude Code leak lure with a “Download ZIP” button.
+
+Conclusion
+Threat actors are actively leveraging the recent Claude Code leak as a social engineering lure to distribute malicious payloads with GitHub serving as a delivery channel. Threat actors move quickly to take advantage of a publicized incident. That kind of rapid movement increases the chance of opportunistic compromise, especially through trojanized repositories.
+
+Organizations must prioritize the implementation of Zero Trust architecture to minimize the impact from a shadow AI instance of a trojanized Claude agent, as well as potential vulnerability exploit attempts against legitimate Claude agents stemming from this code leak.     

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "0.1.0",
+  "description": "Required fields for Foundry JSONL event records.",
+  "requiredFields": [
+    "schemaVersion",
+    "eventId",
+    "type",
+    "timestamp",
+    "actor",
+    "source",
+    "severity",
+    "message",
+    "relatedArtifacts"
+  ],
+  "allowedSeverities": [
+    "debug",
+    "info",
+    "warning",
+    "error",
+    "critical"
+  ],
+  "relatedArtifactsMustExist": true,
+  "eventIdsMustBeUnique": true
+}

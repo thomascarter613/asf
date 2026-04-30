@@ -1,0 +1,33 @@
+
+AI Overview
+The accidental leak of the Anthropic Claude Code CLI source code in late March 2026 revealed that the agent uses a sophisticated, multi-layer memory architecture where the filesystem itself acts as a database for long-term state management. 
+MindStudio
+MindStudio
+ +1
+Rather than relying solely on the LLM's context window, Claude Code (v2.1.88) leverages local files for memory, persistence, and navigation. 
+Zscaler
+Zscaler
+ +1
+Key Architecture Components (From Leak)
+memory.md (External Memory Layer): The leaked code shows Claude maintains a persistent memory.md file. This acts as a semantic index or "pointer system" rather than just a simple log.
+Domain-Specific Memory Files: The agent writes structured information to dedicated files (e.g., memory/project-context.md, memory/decisions.md, memory/user-preferences.md).
+Grep-based Search: Claude uses local file search tools to scan the codebase for information, treating the file system as an active, queryable database to understand project structure.
+Self-Healing/Persistence: The architecture enables the agent to read and rewrite these files over multiple sessions, allowing it to maintain context even after a conversation or session has been reset. 
+MindStudio
+MindStudio
+ +1
+Why This "Filesystem as DB" Approach?
+Token-Efficient: Instead of feeding a massive, ever-growing context window, the agent only reads relevant memory files.
+Transparent and Auditable: The "database" is plain-text markdown, allowing users to read, edit, and fix the agent's knowledge if it becomes confused.
+Stateful Agentic Behavior: It enables the AI to move from being reactive (answering a prompt) to proactive (remembering decisions made days prior). 
+MindStudio
+MindStudio
+ +1
+The Unshipped "Chyros" Daemon
+The leaked code also referenced a future component, the Chyros daemon, which was designed to handle continuous indexing of the filesystem, representing a move toward real-time semantic indexing rather than on-demand grep searches. 
+MindStudio
+MindStudio
+This information is based on analysis of the leaked codebase disclosed by security researcher Chaofan Shou on March 31, 2026. 
+Zscaler
+Zscaler
+ +2

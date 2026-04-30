@@ -1,0 +1,83 @@
+{
+    "schemaVersion": "0.1.0",
+    "contractType": "forbidden-paths",
+    "description": "Forbidden repository paths and path patterns for the Agentic Software Foundry v1.0 scaffold.",
+    "forbiddenPaths": [
+    {
+        "id": "repo.forbidden.bazel-workspace",
+        "path": "WORKSPACE",
+        "match": "exact",
+        "severity": "forbidden",
+        "reason": "Bazel is forbidden by default for this project."
+    },
+    {
+        "id": "repo.forbidden.bazel-workspace-file",
+        "path": "WORKSPACE.bazel",
+        "match": "exact",
+        "severity": "forbidden",
+        "reason": "Bazel is forbidden by default for this project."
+    },
+    {
+        "id": "repo.forbidden.bazel-module",
+        "path": "MODULE.bazel",
+        "match": "exact",
+        "severity": "forbidden",
+        "reason": "Bazel is forbidden by default for this project."
+    },
+    {
+        "id": "repo.forbidden.bazelrc",
+        "path": ".bazelrc",
+        "match": "exact",
+        "severity": "forbidden",
+        "reason": "Bazel is forbidden by default for this project."
+    },
+    {
+        "id": "repo.forbidden.bazelversion",
+        "path": ".bazelversion",
+        "match": "exact",
+        "severity": "forbidden",
+        "reason": "Bazel is forbidden by default for this project."
+    },
+    {
+        "id": "repo.forbidden.build-bazel-root",
+        "path": "BUILD.bazel",
+        "match": "exact",
+        "severity": "forbidden",
+        "reason": "Bazel build files are forbidden by default for this project."
+    },
+    {
+        "id": "repo.forbidden.build-root",
+        "path": "BUILD",
+        "match": "exact",
+        "severity": "forbidden",
+        "reason": "Bazel build files are forbidden by default for this project."
+    },
+    {
+        "id": "repo.forbidden.env-file",
+        "path": ".env",
+        "match": "exact",
+        "severity": "forbidden",
+        "reason": "Secrets must not be committed."
+    },
+    {
+        "id": "repo.forbidden.private-key",
+        "path": ".pem",
+        "match": "suffix",
+        "severity": "forbidden",
+        "reason": "Private keys must not be committed."
+    },
+    {
+        "id": "repo.forbidden.leaked-directory",
+        "path": "leaked",
+        "match": "contains-path-segment",
+        "severity": "forbidden",
+        "reason": "Leak-related artifacts are forbidden by clean-room policy."
+    },
+    {
+        "id": "repo.forbidden.leaks-directory",
+        "path": "leaks",
+        "match": "contains-path-segment",
+        "severity": "forbidden",
+        "reason": "Leak-related artifacts are forbidden by clean-room policy."
+    }]
+}

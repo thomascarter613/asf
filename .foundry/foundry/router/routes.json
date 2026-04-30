@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "0.1.0",
+  "routes": [
+    {
+      "routeId": "local-status",
+      "enabled": true,
+      "description": "Routes important Foundry events to local status artifacts.",
+      "match": {
+        "types": [
+          "directive.received",
+          "work_packet.created",
+          "context_pack.generated",
+          "run.started",
+          "verification.recorded",
+          "verification.passed",
+          "verification.failed",
+          "session_chronicle.written",
+          "memory_candidate.created",
+          "handoff.generated",
+          "repo_contract.passed",
+          "repo_contract.failed",
+          "run.completed",
+          "run.failed"
+        ],
+        "minimumSeverity": "info"
+      },
+      "renderers": [
+        "plain-text",
+        "markdown"
+      ],
+      "sinks": [
+        "filesystem"
+      ]
+    }
+  ],
+  "sinks": {
+    "console": {
+      "enabled": false,
+      "type": "local",
+      "description": "Console output sink. Disabled until an executable router exists."
+    },
+    "filesystem": {
+      "enabled": true,
+      "type": "local",
+      "latestStatusPath": ".foundry/state/latest-status.md"
+    },
+    "external": {
+      "enabled": false,
+      "allowed": false,
+      "description": "External notification sinks are disabled by default for v1.0."
+    }
+  },
+  "defaults": {
+    "externalNotificationsEnabled": false,
+    "requirePolicyGateForExternalSinks": true,
+    "includeSecrets": false
+  }
+}

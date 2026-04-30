@@ -1,0 +1,49 @@
+# Operating system noise
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Node and package tooling
+node_modules/
+dist/
+build/
+coverage/
+
+# Foundry generated artifacts
+.artifacts/verification/*.txt
+.artifacts/verification/*.json
+.artifacts/verification/*.jsonl
+!.artifacts/verification/README.md
+
+# Logs
+*.log
+
+# Bazel is intentionally not used
+.bazelrc
+.bazelversion
+WORKSPACE
+WORKSPACE.bazel
+MODULE.bazel
+BUILD
+BUILD.bazel

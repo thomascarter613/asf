@@ -1,0 +1,224 @@
+{
+    "schemaVersion": "0.1.0",
+    "contractType": "required-manifest-fields",
+    "description": "Required fields and expected safe defaults for .foundry/manifests/foundry.project.json.",
+    "manifestPath": ".foundry/manifests/foundry.project.json",
+    "requiredFields": [
+    {
+        "id": "manifest.required.schema-version",
+        "path": "schemaVersion",
+        "severity": "required"
+    },
+    {
+        "id": "manifest.required.project-id",
+        "path": "projectId",
+        "severity": "required"
+    },
+    {
+        "id": "manifest.required.project-name",
+        "path": "projectName",
+        "severity": "required"
+    },
+    {
+        "id": "manifest.required.status",
+        "path": "status",
+        "severity": "required"
+    },
+    {
+        "id": "manifest.required.profile",
+        "path": "profile",
+        "severity": "required"
+    },
+    {
+        "id": "manifest.required.description",
+        "path": "description",
+        "severity": "required"
+    },
+    {
+        "id": "manifest.required.subsystems",
+        "path": "subsystems",
+        "severity": "required"
+    },
+    {
+        "id": "manifest.required.defaults",
+        "path": "defaults",
+        "severity": "required"
+    },
+    {
+        "id": "manifest.required.forbidden",
+        "path": "forbidden",
+        "severity": "required"
+    },
+    {
+        "id": "manifest.required.policies",
+        "path": "policies",
+        "severity": "required"
+    },
+    {
+        "id": "manifest.required.adrs",
+        "path": "adrs",
+        "severity": "required"
+    }],
+    "expectedValues": [
+    {
+        "id": "manifest.expected.project-id",
+        "path": "projectId",
+        "equals": "agentic-software-foundry",
+        "severity": "required"
+    },
+    {
+        "id": "manifest.expected.profile",
+        "path": "profile",
+        "equals": "governance-grade",
+        "severity": "required"
+    },
+    {
+        "id": "manifest.default.local-first",
+        "path": "defaults.localFirst",
+        "equals": true,
+        "severity": "required"
+    },
+    {
+        "id": "manifest.default.verification-required",
+        "path": "defaults.verificationRequired",
+        "equals": true,
+        "severity": "required"
+    },
+    {
+        "id": "manifest.default.canonical-memory-requires-admission",
+        "path": "defaults.canonicalMemoryRequiresAdmission",
+        "equals": true,
+        "severity": "required"
+    },
+    {
+        "id": "manifest.default.external-notifications-disabled",
+        "path": "defaults.externalNotificationsEnabled",
+        "equals": false,
+        "severity": "required"
+    },
+    {
+        "id": "manifest.default.automatic-remote-push-disabled",
+        "path": "defaults.automaticRemotePush",
+        "equals": false,
+        "severity": "required"
+    },
+    {
+        "id": "manifest.default.automatic-merge-disabled",
+        "path": "defaults.automaticMerge",
+        "equals": false,
+        "severity": "required"
+    },
+    {
+        "id": "manifest.subsystem.foundry-control-plane",
+        "path": "subsystems.foundryControlPlane",
+        "equals": true,
+        "severity": "required"
+    },
+    {
+        "id": "manifest.subsystem.charon",
+        "path": "subsystems.charon",
+        "equals": true,
+        "severity": "required"
+    },
+    {
+        "id": "manifest.subsystem.ai-sdlc-framework",
+        "path": "subsystems.aiSdlcFramework",
+        "equals": true,
+        "severity": "required"
+    },
+    {
+        "id": "manifest.subsystem.monorepo-factory",
+        "path": "subsystems.monorepoFactory",
+        "equals": true,
+        "severity": "required"
+    },
+    {
+        "id": "manifest.subsystem.event-bus",
+        "path": "subsystems.eventBus",
+        "equals": true,
+        "severity": "required"
+    },
+    {
+        "id": "manifest.subsystem.notification-router",
+        "path": "subsystems.notificationRouter",
+        "equals": true,
+        "severity": "required"
+    },
+    {
+        "id": "manifest.subsystem.multi-agent-runtime",
+        "path": "subsystems.multiAgentRuntime",
+        "equals": true,
+        "severity": "required"
+    },
+    {
+        "id": "manifest.subsystem.vector-retrieval",
+        "path": "subsystems.vectorRetrieval",
+        "equals": true,
+        "severity": "required"
+    },
+    {
+        "id": "manifest.subsystem.worktree-execution",
+        "path": "subsystems.worktreeExecution",
+        "equals": true,
+        "severity": "required"
+    },
+    {
+        "id": "manifest.subsystem.evaluation-harness",
+        "path": "subsystems.evaluationHarness",
+        "equals": true,
+        "severity": "required"
+    }],
+    "requiredArrayIncludes": [
+    {
+        "id": "manifest.forbidden.tool.bazel",
+        "path": "forbidden.tools",
+        "includes": "bazel",
+        "severity": "required"
+    },
+    {
+        "id": "manifest.forbidden.behavior.silent-canonical-memory-promotion",
+        "path": "forbidden.behaviors",
+        "includes": "silent-canonical-memory-promotion",
+        "severity": "required"
+    },
+    {
+        "id": "manifest.forbidden.behavior.automatic-remote-push",
+        "path": "forbidden.behaviors",
+        "includes": "automatic-remote-push",
+        "severity": "required"
+    },
+    {
+        "id": "manifest.forbidden.behavior.automatic-merge",
+        "path": "forbidden.behaviors",
+        "includes": "automatic-merge",
+        "severity": "required"
+    },
+    {
+        "id": "manifest.forbidden.behavior.external-notification-without-policy",
+        "path": "forbidden.behaviors",
+        "includes": "external-notification-without-policy",
+        "severity": "required"
+    },
+    {
+        "id": "manifest.forbidden.behavior.leaked-code-ingestion",
+        "path": "forbidden.behaviors",
+        "includes": "leaked-code-ingestion",
+        "severity": "required"
+    }],
+    "requiredPathReferences": [
+    {
+        "id": "manifest.policy.charter",
+        "path": "policies.charter",
+        "severity": "required"
+    },
+    {
+        "id": "manifest.policy.clean-room",
+        "path": "policies.cleanRoom",
+        "severity": "required"
+    },
+    {
+        "id": "manifest.policy.constitution",
+        "path": "policies.constitution",
+        "severity": "required"
+    }]
+}

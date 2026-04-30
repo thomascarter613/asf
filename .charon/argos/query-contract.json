@@ -1,0 +1,27 @@
+{
+    "schemaVersion": "0.1.0",
+    "status": "planned",
+    "purpose": "Defines the future query shape for Charon retrieval operations.",
+    "example":
+    {
+        "query": "What context is needed to continue implementing the event router?",
+        "artifactTypes": [
+            "adr",
+            "policy",
+            "work-packet",
+            "canonical-memory",
+            "handoff"
+        ],
+        "trustLevels": [
+            "canonical",
+            "human-approved",
+            "verified"
+        ],
+        "excludeLifecycleStatuses": [
+            "rejected",
+            "superseded"
+        ],
+        "maxResults": 10,
+        "purpose": "context-pack-generation"
+    }
+}

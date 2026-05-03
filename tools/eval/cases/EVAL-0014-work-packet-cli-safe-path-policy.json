@@ -1,0 +1,19 @@
+{
+  "id": "EVAL-0014",
+  "title": "Work packet CLI safe-path policy exists",
+  "category": "runtime-package-cli",
+  "status": "active",
+  "required": true,
+  "purpose": "Verify that the work-packet CLI includes a safe-path policy before reading caller-provided work-packet files.",
+  "checks": [
+    { "type": "file_exists", "path": "packages/work-packet-cli/src/path-policy.ts" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/src/path-policy.ts", "pattern": "resolveSafeWorkPacketPath" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/src/path-policy.ts", "pattern": "isPathInsideRoot" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/src/path-policy.ts", "pattern": "Symlink escapes are not allowed" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/src/cli.ts", "pattern": "resolveSafeWorkPacketPath" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/src/cli.test.ts", "pattern": "rejects paths outside the configured working directory" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/src/cli.test.ts", "pattern": "rejects symlinks that resolve outside the configured working directory" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/README.md", "pattern": "Path Safety Policy" },
+    { "type": "command_succeeds", "command": "bun test packages/work-packet-cli" }
+  ]
+}

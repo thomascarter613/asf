@@ -1,10 +1,11 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, expect, test } from "bun:test";
 import { parseValidateArgs, runWorkPacketCli } from "./cli";
 import { WORK_PACKET_CLI_EXIT_CODES } from "./exit-codes";
 import { WORK_PACKET_VALIDATION_JSON_SCHEMA_VERSION } from "./format";
+import { resolveSafeWorkPacketPath } from "./path-policy";
 
 const validDocument = `---
 title: "WP-0046: Work Packet CLI Runtime Baseline"
@@ -148,6 +149,111 @@ function parseJsonValidationResult(stdout: string): ParsedJsonValidationResult {
   return JSON.parse(stdout) as ParsedJsonValidationResult;
 }
 
+describe("resolveSafeWorkPacketPath", () => {
+  test("allows relative paths inside the configured working directory", async () => {
+    await withTempWorkspace(async (root) => {
+      const path = await writeTempFile(root, "docs/WP-0001.md", validDocument);
+
+      const result = await resolveSafeWorkPacketPath("docs/WP-0001.md", {
+        cwd: root,
+      });
+
+      expect(result.ok).toBe(true);
+      expect(result.displayPath).toBe("docs/WP-0001.md");
+      expect(result.resolvedPath).toBe(path);
+    });
+  });
+
+  test("allows absolute paths inside the configured working directory", async () => {
+    await withTempWorkspace(async (root) => {
+      const path = await writeTempFile(root, "docs/WP-0001.md", validDocument);
+
+      const result = await resolveSafeWorkPacketPath(path, { cwd: root });
+
+      expect(result.ok).toBe(true);
+      expect(result.displayPath).toBe(path);
+      expect(result.resolvedPath).toBe(path);
+    });
+  });
+
+  test("rejects relative paths that resolve outside the configured working directory", async () => {
+    await withTempWorkspace(async (root) => {
+      const inside = join(root, "inside");
+      await mkdir(inside, { recursive: true });
+
+      const result = await resolveSafeWorkPacketPath("../outside.md", {
+        cwd: inside,
+      });
+
+      expect(result.ok).toBe(false);
+      expect(result.error).toContain("inside the current working directory");
+    });
+  });
+
+  test("rejects absolute paths outside the configured working directory", async () => {
+    const parent = await createTempWorkspace();
+
+    try {
+      const root = join(parent, "repo");
+      await mkdir(root, { recursive: true });
+      const outsidePath = await writeTempFile(
+        parent,
+        "outside/WP-0001.md",
+        validDocument,
+      );
+
+      const result = await resolveSafeWorkPacketPath(outsidePath, {
+        cwd: root,
+      });
+
+      expect(result.ok).toBe(false);
+      expect(result.error).toContain("inside the current working directory");
+    } finally {
+      await rm(parent, { force: true, recursive: true });
+    }
+  });
+
+  test("rejects NUL-byte paths", async () => {
+    await withTempWorkspace(async (root) => {
+      const result = await resolveSafeWorkPacketPath("docs/WP-0001.md\0", {
+        cwd: root,
+      });
+
+      expect(result.ok).toBe(false);
+      expect(result.error).toContain("NUL bytes");
+    });
+  });
+
+  test("rejects symlinks that resolve outside the configured working directory", async () => {
+    const parent = await createTempWorkspace();
+
+    try {
+      const root = join(parent, "repo");
+      const outside = join(parent, "outside");
+      await mkdir(root, { recursive: true });
+      await mkdir(outside, { recursive: true });
+
+      const outsidePath = await writeTempFile(
+        outside,
+        "WP-0001.md",
+        validDocument,
+      );
+      const symlinkPath = join(root, "linked-outside.md");
+
+      await symlink(outsidePath, symlinkPath);
+
+      const result = await resolveSafeWorkPacketPath("linked-outside.md", {
+        cwd: root,
+      });
+
+      expect(result.ok).toBe(false);
+      expect(result.error).toContain("Symlink escapes are not allowed");
+    } finally {
+      await rm(parent, { force: true, recursive: true });
+    }
+  });
+});
+
 describe("parseValidateArgs", () => {
   test("defaults to text format", () => {
     const result = parseValidateArgs(["docs/work-packets/WP-0001.md"]);
@@ -243,6 +349,7 @@ describe("runWorkPacketCli", () => {
     expect(result.exitCode).toBe(WORK_PACKET_CLI_EXIT_CODES.SUCCESS);
     expect(result.stdout).toContain("Validate a work-packet Markdown file.");
     expect(result.stdout).toContain("--format json");
+    expect(result.stdout).toContain("current working directory");
   });
 
   test("unknown command exits usage error", async () => {
@@ -285,11 +392,25 @@ describe("runWorkPacketCli", () => {
     expect(result.stderr).toContain("Missing required value for --format.");
   });
 
+  test("validate rejects paths outside the configured working directory", async () => {
+    await withTempWorkspace(async (root) => {
+      const inside = join(root, "inside");
+      await mkdir(inside, { recursive: true });
+
+      const result = await runWorkPacketCli(["validate", "../outside.md"], {
+        cwd: inside,
+      });
+
+      expect(result.exitCode).toBe(WORK_PACKET_CLI_EXIT_CODES.USAGE_ERROR);
+      expect(result.stderr).toContain("inside the current working directory");
+    });
+  });
+
   test("valid file exits success and prints PASS by default", async () => {
     await withTempWorkspace(async (root) => {
       const path = await writeTempFile(root, "valid.md", validDocument);
 
-      const result = await runWorkPacketCli(["validate", path]);
+      const result = await runWorkPacketCli(["validate", path], { cwd: root });
 
       expect(result.exitCode).toBe(WORK_PACKET_CLI_EXIT_CODES.SUCCESS);
       expect(result.stdout).toContain("PASS");
@@ -304,12 +425,10 @@ describe("runWorkPacketCli", () => {
     await withTempWorkspace(async (root) => {
       const path = await writeTempFile(root, "valid.md", validDocument);
 
-      const result = await runWorkPacketCli([
-        "validate",
-        path,
-        "--format",
-        "text",
-      ]);
+      const result = await runWorkPacketCli(
+        ["validate", path, "--format", "text"],
+        { cwd: root },
+      );
 
       expect(result.exitCode).toBe(WORK_PACKET_CLI_EXIT_CODES.SUCCESS);
       expect(result.stdout).toContain("PASS");
@@ -321,12 +440,10 @@ describe("runWorkPacketCli", () => {
     await withTempWorkspace(async (root) => {
       const path = await writeTempFile(root, "valid.md", validDocument);
 
-      const result = await runWorkPacketCli([
-        "validate",
-        path,
-        "--format",
-        "json",
-      ]);
+      const result = await runWorkPacketCli(
+        ["validate", path, "--format", "json"],
+        { cwd: root },
+      );
       const json = parseJsonValidationResult(result.stdout);
 
       expect(result.exitCode).toBe(WORK_PACKET_CLI_EXIT_CODES.SUCCESS);
@@ -352,11 +469,9 @@ describe("runWorkPacketCli", () => {
     await withTempWorkspace(async (root) => {
       const path = await writeTempFile(root, "valid.md", validDocument);
 
-      const result = await runWorkPacketCli([
-        "validate",
-        path,
-        "--format=json",
-      ]);
+      const result = await runWorkPacketCli(["validate", path, "--format=json"], {
+        cwd: root,
+      });
       const json = parseJsonValidationResult(result.stdout);
 
       expect(result.exitCode).toBe(WORK_PACKET_CLI_EXIT_CODES.SUCCESS);
@@ -369,7 +484,7 @@ describe("runWorkPacketCli", () => {
     await withTempWorkspace(async (root) => {
       const path = await writeTempFile(root, "invalid.md", invalidDocument);
 
-      const result = await runWorkPacketCli(["validate", path]);
+      const result = await runWorkPacketCli(["validate", path], { cwd: root });
 
       expect(result.exitCode).toBe(WORK_PACKET_CLI_EXIT_CODES.VALIDATION_FAILED);
       expect(result.stdout).toContain("FAIL");
@@ -382,12 +497,10 @@ describe("runWorkPacketCli", () => {
     await withTempWorkspace(async (root) => {
       const path = await writeTempFile(root, "invalid.md", invalidDocument);
 
-      const result = await runWorkPacketCli([
-        "validate",
-        path,
-        "--format",
-        "json",
-      ]);
+      const result = await runWorkPacketCli(
+        ["validate", path, "--format", "json"],
+        { cwd: root },
+      );
       const json = parseJsonValidationResult(result.stdout);
 
       expect(result.exitCode).toBe(WORK_PACKET_CLI_EXIT_CODES.VALIDATION_FAILED);
@@ -404,7 +517,7 @@ describe("runWorkPacketCli", () => {
     await withTempWorkspace(async (root) => {
       const path = join(root, "missing.md");
 
-      const result = await runWorkPacketCli(["validate", path]);
+      const result = await runWorkPacketCli(["validate", path], { cwd: root });
 
       expect(result.exitCode).toBe(WORK_PACKET_CLI_EXIT_CODES.VALIDATION_FAILED);
       expect(result.stdout).toContain("FAIL");
@@ -416,12 +529,10 @@ describe("runWorkPacketCli", () => {
     await withTempWorkspace(async (root) => {
       const path = join(root, "missing.md");
 
-      const result = await runWorkPacketCli([
-        "validate",
-        path,
-        "--format",
-        "json",
-      ]);
+      const result = await runWorkPacketCli(
+        ["validate", path, "--format", "json"],
+        { cwd: root },
+      );
       const json = parseJsonValidationResult(result.stdout);
 
       expect(result.exitCode).toBe(WORK_PACKET_CLI_EXIT_CODES.VALIDATION_FAILED);
@@ -435,7 +546,7 @@ describe("runWorkPacketCli", () => {
     await withTempWorkspace(async (root) => {
       const path = await writeTempFile(root, "warning.md", warningDocument);
 
-      const result = await runWorkPacketCli(["validate", path]);
+      const result = await runWorkPacketCli(["validate", path], { cwd: root });
 
       expect(result.exitCode).toBe(WORK_PACKET_CLI_EXIT_CODES.SUCCESS);
       expect(result.stdout).toContain("PASS");
@@ -448,12 +559,10 @@ describe("runWorkPacketCli", () => {
     await withTempWorkspace(async (root) => {
       const path = await writeTempFile(root, "warning.md", warningDocument);
 
-      const result = await runWorkPacketCli([
-        "validate",
-        path,
-        "--format",
-        "json",
-      ]);
+      const result = await runWorkPacketCli(
+        ["validate", path, "--format", "json"],
+        { cwd: root },
+      );
       const json = parseJsonValidationResult(result.stdout);
 
       expect(result.exitCode).toBe(WORK_PACKET_CLI_EXIT_CODES.SUCCESS);

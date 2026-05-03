@@ -28,6 +28,30 @@ bun run work-packet help
 bun run work-packet validate --help
 ```
 
+## Path Safety Policy
+
+The CLI validates exactly one caller-provided file path.
+
+Before reading the file, the CLI requires the path to resolve inside the current working directory.
+
+Allowed path examples from the repository root:
+
+```bash
+bun run work-packet validate docs/work-packets/WP-0043-work-packet-file-loading-runtime-baseline.md
+bun run work-packet validate ./docs/work-packets/WP-0043-work-packet-file-loading-runtime-baseline.md
+```
+
+Rejected path examples:
+
+```bash
+bun run work-packet validate ../outside.md
+bun run work-packet validate /tmp/outside.md
+```
+
+Existing symlink paths that resolve outside the current working directory are rejected.
+
+Missing files inside the current working directory are safe to attempt and are reported as validation failures with `file-read-error`.
+
 ## Output Formats
 
 The default output format is human-readable plain text:
@@ -66,6 +90,10 @@ VALIDATION_FAILED = 1
 USAGE_ERROR = 2
 UNEXPECTED_ERROR = 3
 ```
+
+Unsafe paths are usage errors and exit with `USAGE_ERROR = 2`.
+
+Validation failures for safe paths exit with `VALIDATION_FAILED = 1`.
 
 ## Plain-Text Output
 

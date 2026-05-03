@@ -4,11 +4,16 @@ import {
   formatWorkPacketValidationResult,
   type WorkPacketCliOutputFormat,
 } from "./format";
+import { resolveSafeWorkPacketPath } from "./path-policy";
 
 export interface WorkPacketCliResult {
   exitCode: number;
   stdout: string;
   stderr: string;
+}
+
+export interface WorkPacketCliOptions {
+  cwd?: string;
 }
 
 interface ValidateArgsParseResult {
@@ -50,7 +55,7 @@ Usage:
   bun run work-packet validate --help
 
 Arguments:
-  path              Path to one work-packet Markdown file.
+  path              Path to one work-packet Markdown file. The path must resolve inside the current working directory.
 
 Options:
   --format text     Print human-readable plain-text output. This is the default.
@@ -218,6 +223,7 @@ export function parseValidateArgs(args: string[]): ValidateArgsParseResult {
 
 export async function runWorkPacketCli(
   args: string[],
+  options: WorkPacketCliOptions = {},
 ): Promise<WorkPacketCliResult> {
   try {
     const { command, rest } = parseWorkPacketCliArgs(args);
@@ -244,10 +250,24 @@ export async function runWorkPacketCli(
       return validateUsageError("Missing required path argument.");
     }
 
-    const validation = await validateWorkPacketFile(parsedValidateArgs.path);
-    const stdout = formatWorkPacketValidationResult(validation, {
-      format: parsedValidateArgs.format,
+    const safePath = await resolveSafeWorkPacketPath(parsedValidateArgs.path, {
+      cwd: options.cwd,
     });
+
+    if (!safePath.ok || safePath.resolvedPath === undefined) {
+      return validateUsageError(safePath.error ?? "Unsafe path rejected.");
+    }
+
+    const validation = await validateWorkPacketFile(safePath.resolvedPath);
+    const stdout = formatWorkPacketValidationResult(
+      {
+        ...validation,
+        path: safePath.displayPath,
+      },
+      {
+        format: parsedValidateArgs.format,
+      },
+    );
 
     return {
       exitCode: validation.valid

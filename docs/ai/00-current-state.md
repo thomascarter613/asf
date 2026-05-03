@@ -1,8 +1,8 @@
 ---
 title: "Current State"
-description: "Current repository state and continuation guide for the Agentic Software Framework, aligned to the uploaded repository tree baseline, current ADR lineage, planning baseline, domain model, verification baseline, work-packet sequence, Bun package/tooling setup, executable repo contract script, and evaluation harness baseline."
+description: "Current repository state and continuation guide for the Agentic Software Framework, aligned to the uploaded repository tree baseline, current ADR lineage, planning baseline, domain model, verification baseline, work-packet sequence, Bun package/tooling setup, executable repo contract script, CI workflow baseline, and evaluation harness baseline."
 status: "active"
-version: "0.4.0"
+version: "0.5.0"
 created: "2026-05-03"
 updated: "2026-05-03"
 owner: "Project Steward"
@@ -18,6 +18,7 @@ related_documents:
   - "tree"
   - "package.json"
   - "bun.lock"
+  - ".github/workflows/ci.yml"
   - "docs/adr/README.md"
   - "docs/adr/ADR-0019-primary-package-managers-uv-cargo-and-pnpm.md"
   - "docs/adr/ADR-0023-primary-package-managers-bun-uv-and-cargo.md"
@@ -29,13 +30,14 @@ related_documents:
   - "docs/planning/05-persistence-adr-overlap-review.md"
   - "docs/planning/06-implementation-readiness-plan.md"
   - "docs/planning/07-package-and-tooling-baseline.md"
+  - "docs/planning/08-ci-baseline-planning.md"
   - "docs/domain/00-domain-model.md"
   - "docs/verification/00-verification-baseline.md"
   - "docs/verification/01-repo-contract-baseline.md"
   - "docs/verification/02-evaluation-harness-baseline.md"
   - "docs/work-packets/README.md"
   - "docs/work-packets/WORK-PACKET-TEMPLATE.md"
-  - "docs/work-packets/WP-0024-current-state-and-readme-bun-tooling-status-update.md"
+  - "docs/work-packets/WP-0027-current-state-and-readme-ci-status-update.md"
   - "docs/ai/01-handoff-packet-template.md"
   - "docs/ai/02-context-source-rules.md"
   - "tools/check-repo-contract.sh"
@@ -49,7 +51,7 @@ This document records the current state of the Agentic Software Framework reposi
 
 The uploaded repository tree is the active baseline.
 
-This document should be updated when meaningful repository state changes occur, especially when work packets are completed, baseline structure changes, ADR status changes, verification behavior changes, package/tooling behavior changes, runtime implementation begins, or implementation-readiness planning changes.
+This document should be updated when meaningful repository state changes occur, especially when work packets are completed, baseline structure changes, ADR status changes, verification behavior changes, package/tooling behavior changes, CI behavior changes, runtime implementation begins, or implementation-readiness planning changes.
 
 ---
 
@@ -59,12 +61,12 @@ Current phase:
 
 ```text
 Baseline Stabilization / Implementation Readiness
-````
+```
 
 Current objective:
 
 ```text
-Stabilize the uploaded repository baseline, preserve the current ADR lineage, maintain work-packet discipline, keep context-continuity artifacts current, keep executable local repo contract checks aligned, preserve the Bun package/tooling baseline, and prepare for CI and runtime implementation sequencing before runtime implementation begins.
+Stabilize the uploaded repository baseline, preserve the current ADR lineage, maintain work-packet discipline, keep context-continuity artifacts current, keep executable local repo contract checks aligned, preserve the Bun package/tooling baseline, preserve the CI baseline, and prepare for executable evaluation harness planning before runtime implementation begins.
 ```
 
 Runtime implementation status:
@@ -96,7 +98,30 @@ pnpm-lock.yaml
 CI status:
 
 ```text
-CI workflows do not exist yet.
+CI workflow baseline exists.
+```
+
+CI workflow file:
+
+```text
+.github/workflows/ci.yml
+```
+
+CI verification behavior:
+
+```bash
+bun install --frozen-lockfile
+bun run verify
+git diff --check
+```
+
+CI boundaries:
+
+```text
+CI does not deploy.
+CI does not publish packages.
+CI does not require secrets.
+CI does not run runtime tests because runtime implementation has not started.
 ```
 
 Repo contract testing status:
@@ -104,6 +129,7 @@ Repo contract testing status:
 ```text
 Executable local repo contract script exists at tools/check-repo-contract.sh.
 The repo contract script is Bun-aware.
+The repo contract script requires the baseline CI workflow.
 ```
 
 Evaluation harness status:
@@ -218,7 +244,59 @@ Future Rust package/build work should use `cargo` unless a later ADR changes tha
 
 ---
 
-## 6. Current Documentation Structure
+## 6. CI State
+
+CI workflow baseline exists.
+
+Current CI workflow:
+
+```text
+.github/workflows/ci.yml
+```
+
+Current CI provider:
+
+```text
+GitHub Actions
+```
+
+Current CI triggers:
+
+```text
+push to main
+pull_request
+```
+
+Current CI verification behavior:
+
+```bash
+bun install --frozen-lockfile
+bun run verify
+git diff --check
+```
+
+Current CI security boundary:
+
+```text
+The baseline CI workflow does not require secrets.
+```
+
+Current CI delivery boundary:
+
+```text
+The baseline CI workflow does not deploy.
+The baseline CI workflow does not publish packages.
+```
+
+Current runtime boundary:
+
+```text
+The baseline CI workflow does not run runtime tests because runtime implementation has not started.
+```
+
+---
+
+## 7. Current Documentation Structure
 
 Current documentation directories:
 
@@ -239,15 +317,27 @@ Current tooling directory:
 tools/
 ```
 
+Current CI directory:
+
+```text
+.github/workflows/
+```
+
 Current local repo contract script:
 
 ```text
 tools/check-repo-contract.sh
 ```
 
+Current CI workflow:
+
+```text
+.github/workflows/ci.yml
+```
+
 ---
 
-## 7. Current Product and Architecture Documents
+## 8. Current Product and Architecture Documents
 
 Current product documents:
 
@@ -279,7 +369,7 @@ Both are preserved until a future Architecture Overview Resolution work packet d
 
 ---
 
-## 8. Current ADR Lineage
+## 9. Current ADR Lineage
 
 Current ADR support files:
 
@@ -343,7 +433,7 @@ Do not renumber, delete, rename, supersede, or fill ADRs automatically.
 
 ---
 
-## 9. Current Work Packet State
+## 10. Current Work Packet State
 
 Work-packet governance exists:
 
@@ -379,23 +469,26 @@ WP-0021 Package and Tooling Setup
 WP-0022 Package Manager ADR Correction
 WP-0023 Repo Contract Script Bun Tooling Update
 WP-0024 Current State and README Bun Tooling Status Update
+WP-0025 CI Baseline Planning
+WP-0026 CI Workflow Baseline
+WP-0027 Current State and README CI Status Update
 ```
 
 Current active packet:
 
 ```text
-WP-0024: Current State and README Bun Tooling Status Update
+WP-0027: Current State and README CI Status Update
 ```
 
 Recommended next packet:
 
 ```text
-WP-0025: CI Baseline Planning
+WP-0028: Executable Evaluation Harness Planning
 ```
 
 ---
 
-## 10. Completed Baseline Stabilization and Readiness Artifacts
+## 11. Completed Baseline Stabilization and Readiness Artifacts
 
 Current stabilization and readiness artifacts:
 
@@ -403,6 +496,7 @@ Current stabilization and readiness artifacts:
 README.md
 package.json
 bun.lock
+.github/workflows/ci.yml
 docs/planning/00-baseline-inventory.md
 docs/domain/00-domain-model.md
 docs/planning/01-planning-baseline.md
@@ -418,13 +512,14 @@ docs/adr/README.md
 docs/planning/05-persistence-adr-overlap-review.md
 docs/planning/06-implementation-readiness-plan.md
 docs/planning/07-package-and-tooling-baseline.md
+docs/planning/08-ci-baseline-planning.md
 docs/verification/02-evaluation-harness-baseline.md
 tools/check-repo-contract.sh
 ```
 
 ---
 
-## 11. Verification State
+## 12. Verification State
 
 Current verification level:
 
@@ -438,6 +533,7 @@ Current repo contract level:
 Documentation-level repo contract baseline exists.
 Executable local repo contract script exists.
 Bun-aware repo contract checks exist.
+CI workflow baseline is required by the repo contract.
 ```
 
 Executable repo contract script:
@@ -460,6 +556,26 @@ or:
 ./tools/check-repo-contract.sh
 ```
 
+Current CI verification:
+
+```text
+Baseline GitHub Actions CI exists.
+```
+
+CI workflow:
+
+```text
+.github/workflows/ci.yml
+```
+
+CI runs:
+
+```bash
+bun install --frozen-lockfile
+bun run verify
+git diff --check
+```
+
 Current evaluation harness level:
 
 ```text
@@ -473,42 +589,29 @@ Evaluation harness baseline:
 docs/verification/02-evaluation-harness-baseline.md
 ```
 
-CI verification:
-
-```text
-CI workflows do not exist yet.
-```
-
 Runtime tests:
 
 ```text
 Not applicable yet because runtime implementation has not started.
 ```
 
-Current verification command for WP-0024:
+Current verification command for WP-0027:
 
 ```bash
+test -f docs/work-packets/WP-0027-current-state-and-readme-ci-status-update.md && \
 test -f README.md && \
 test -f docs/ai/00-current-state.md && \
-test -f docs/work-packets/WP-0024-current-state-and-readme-bun-tooling-status-update.md && \
-test -f package.json && \
-test -f bun.lock && \
-test ! -f pnpm-workspace.yaml && \
-test ! -f pnpm-lock.yaml && \
-test -x tools/check-repo-contract.sh && \
-grep -q 'Bun package/tooling setup exists' docs/ai/00-current-state.md && \
-grep -q 'ADR-0023 supersedes ADR-0019' docs/ai/00-current-state.md && \
-grep -q 'Runtime implementation has not started' docs/ai/00-current-state.md && \
-grep -q 'CI workflows do not exist yet' docs/ai/00-current-state.md && \
-grep -q 'Executable evaluation harness implementation does not exist yet' docs/ai/00-current-state.md && \
-grep -q 'Bun is canonical' README.md && \
-grep -q 'package.json' README.md && \
-grep -q 'bun.lock' README.md && \
-grep -q 'pnpm-workspace.yaml' README.md && \
-grep -q 'pnpm-lock.yaml' README.md && \
+test -f .github/workflows/ci.yml && \
+grep -q 'CI workflow baseline exists' README.md && \
+grep -q '.github/workflows/ci.yml' README.md && \
+grep -q 'bun install --frozen-lockfile' README.md && \
+grep -q 'bun run verify' README.md && \
+grep -q 'git diff --check' README.md && \
 grep -q 'Runtime implementation has not started' README.md && \
-grep -q 'CI workflows do not exist yet' README.md && \
-grep -q 'Executable evaluation harness implementation does not exist yet' README.md && \
+grep -q 'CI workflow baseline exists' docs/ai/00-current-state.md && \
+grep -q '.github/workflows/ci.yml' docs/ai/00-current-state.md && \
+grep -q 'WP-0027' docs/ai/00-current-state.md && \
+grep -q 'Runtime implementation has not started' docs/ai/00-current-state.md && \
 bun run verify && \
 ./tools/check-repo-contract.sh && \
 git diff --check
@@ -516,7 +619,7 @@ git diff --check
 
 ---
 
-## 12. Current Known Risks
+## 13. Current Known Risks
 
 | Risk                                                         | Status | Handling                                                            |
 | ------------------------------------------------------------ | ------ | ------------------------------------------------------------------- |
@@ -526,19 +629,19 @@ git diff --check
 | Architecture overview exists in two places.                  | Known  | Preserved pending future resolution.                                |
 | Root `tree` file becomes stale.                              | Known  | Treated as historical baseline artifact, not live state.            |
 | Repo contract script becomes stale as new packets are added. | Active | Update script through explicit packets when baseline expands.       |
+| CI may expand too early.                                     | Active | Keep CI limited to baseline verification until future packets.      |
 | Evaluation harness is documentation-only.                    | Known  | Executable evaluation harness is future work.                       |
 | Context files become stale.                                  | Active | Update this file after meaningful status changes.                   |
 | Runtime implementation starts too soon.                      | Active | Require implementation-readiness planning first.                    |
-| CI begins without plan.                                      | Active | Create CI baseline planning before CI workflow implementation.      |
 
 ---
 
-## 13. Recommended Next Work
+## 14. Recommended Next Work
 
-After WP-0024 is completed, the recommended next work is:
+After WP-0027 is completed, the recommended next work is:
 
 ```text
-WP-0025: CI Baseline Planning
+WP-0028: Executable Evaluation Harness Planning
 ```
 
 Rationale:
@@ -546,23 +649,21 @@ Rationale:
 1. Baseline stabilization has created core repository orientation.
 2. The repository now has local executable repo contract verification.
 3. Bun package/tooling setup exists.
-4. The repo contract script is Bun-aware.
+4. CI baseline verification exists.
 5. The evaluation harness model exists at the documentation level.
-6. README and current-state documentation are synchronized.
-7. Runtime implementation has not started.
-8. CI should be planned before creating workflows.
+6. Runtime implementation has not started.
+7. Executable evaluation harness implementation should be planned before runtime implementation begins.
 
 Recommended later work:
 
 ```text
-WP-0026: CI Workflow Baseline
-WP-0027: Executable Evaluation Harness Planning
-WP-0028: Runtime Implementation Slice Plan
+WP-0029: Executable Evaluation Harness Baseline
+WP-0030: Runtime Implementation Slice Plan
 ```
 
 ---
 
-## 14. Rules for Future Sessions
+## 15. Rules for Future Sessions
 
 Future sessions must:
 
@@ -581,10 +682,13 @@ Future sessions must:
 13. Keep context-continuity artifacts updated after meaningful state changes.
 14. Do not create `pnpm-workspace.yaml`.
 15. Do not create `pnpm-lock.yaml`.
+16. Do not add deployment CI without a work packet.
+17. Do not add package-publishing CI without a work packet.
+18. Do not add runtime test claims before runtime implementation exists.
 
 ---
 
-## 15. Update Triggers
+## 16. Update Triggers
 
 Update this file when:
 
@@ -595,9 +699,9 @@ Update this file when:
 5. Root README changes.
 6. Architecture overview placement is resolved.
 7. Repo contract script changes.
-8. Evaluation harness baseline changes.
-9. Executable evaluation harness implementation begins.
-10. CI is added.
+8. CI behavior changes.
+9. Evaluation harness baseline changes.
+10. Executable evaluation harness implementation begins.
 11. Package-manager setup changes.
 12. Runtime implementation begins.
 13. Context source rules change.
@@ -605,10 +709,10 @@ Update this file when:
 
 ---
 
-## 16. Current State Summary
+## 17. Current State Summary
 
 Current summary:
 
 ```text
-The repository is in Baseline Stabilization / Implementation Readiness. The uploaded tree is the active baseline. Product, architecture, ADR, domain, planning, verification, work-packet, context-continuity, root README, Bun package/tooling, executable local repo contract, and evaluation harness baseline artifacts now exist. ADR-0023 supersedes ADR-0019 for active package-manager direction, while ADR-0019 remains preserved as historical context. Runtime implementation has not started. CI workflows do not exist yet. Executable evaluation harness implementation does not exist yet. Known baseline caveats are preserved. The next recommended step after WP-0024 is CI baseline planning.
+The repository is in Baseline Stabilization / Implementation Readiness. The uploaded tree is the active baseline. Product, architecture, ADR, domain, planning, verification, work-packet, context-continuity, root README, Bun package/tooling, executable local repo contract, baseline GitHub Actions CI, and evaluation harness baseline artifacts now exist. ADR-0023 supersedes ADR-0019 for active package-manager direction, while ADR-0019 remains preserved as historical context. Runtime implementation has not started. Executable evaluation harness implementation does not exist yet. Known baseline caveats are preserved. The next recommended step after WP-0027 is executable evaluation harness planning.
 ```

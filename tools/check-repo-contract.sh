@@ -141,6 +141,29 @@ check_contains "package.json" '"verify": "bun run verify:repo"' "package.json de
 check_contains "package.json" '"verify:repo": "bash tools/check-repo-contract.sh"' "package.json defines verify:repo through repo contract script"
 check_not_contains "package.json" 'pnpm' "package.json does not reference pnpm"
 
+print_header "CI baseline files"
+
+check_dir ".github"
+check_dir ".github/workflows"
+check_file ".github/workflows/ci.yml"
+
+print_header "CI workflow contract"
+
+check_contains ".github/workflows/ci.yml" '^name: CI$' "CI workflow has expected name"
+check_contains ".github/workflows/ci.yml" 'push:' "CI workflow runs on push"
+check_contains ".github/workflows/ci.yml" 'pull_request:' "CI workflow runs on pull request"
+check_contains ".github/workflows/ci.yml" 'branches:' "CI workflow constrains push branches"
+check_contains ".github/workflows/ci.yml" 'main' "CI workflow references main branch"
+check_contains ".github/workflows/ci.yml" 'contents: read' "CI workflow uses read-only contents permission"
+check_contains ".github/workflows/ci.yml" 'actions/checkout@v4' "CI workflow checks out repository"
+check_contains ".github/workflows/ci.yml" 'oven-sh/setup-bun@v2' "CI workflow sets up Bun"
+check_contains ".github/workflows/ci.yml" 'bun install --frozen-lockfile' "CI workflow installs with frozen Bun lockfile"
+check_contains ".github/workflows/ci.yml" 'bun run verify' "CI workflow runs Bun verification"
+check_contains ".github/workflows/ci.yml" 'git diff --check' "CI workflow checks whitespace"
+check_not_contains ".github/workflows/ci.yml" 'secrets\.' "CI workflow does not reference GitHub secrets"
+check_not_contains ".github/workflows/ci.yml" 'deploy' "CI workflow does not deploy"
+check_not_contains ".github/workflows/ci.yml" 'publish' "CI workflow does not publish packages"
+
 print_header "Required directories"
 
 check_dir "docs"
@@ -222,6 +245,7 @@ check_file "docs/planning/04-baseline-tree-artifact-policy.md"
 check_file "docs/planning/05-persistence-adr-overlap-review.md"
 check_file "docs/planning/06-implementation-readiness-plan.md"
 check_file "docs/planning/07-package-and-tooling-baseline.md"
+check_file "docs/planning/08-ci-baseline-planning.md"
 
 print_header "Domain documents"
 
@@ -269,6 +293,9 @@ check_file "docs/work-packets/WP-0020-repo-contract-script-readiness-update.md"
 check_file "docs/work-packets/WP-0021-package-and-tooling-setup.md"
 check_file "docs/work-packets/WP-0022-package-manager-adr-correction.md"
 check_file "docs/work-packets/WP-0023-repo-contract-script-bun-tooling-update.md"
+check_file "docs/work-packets/WP-0024-current-state-and-readme-bun-tooling-status-update.md"
+check_file "docs/work-packets/WP-0025-ci-baseline-planning.md"
+check_file "docs/work-packets/WP-0026-ci-workflow-baseline.md"
 
 print_header "Script self-check"
 
@@ -287,6 +314,7 @@ check_contains "docs/planning/04-baseline-tree-artifact-policy.md" '^# Baseline 
 check_contains "docs/planning/05-persistence-adr-overlap-review.md" '^# Persistence ADR Overlap Review$' "persistence ADR overlap review has expected heading"
 check_contains "docs/planning/06-implementation-readiness-plan.md" '^# Implementation Readiness Plan$' "implementation readiness plan has expected heading"
 check_contains "docs/planning/07-package-and-tooling-baseline.md" '^# Package and Tooling Baseline$' "package and tooling baseline has expected heading"
+check_contains "docs/planning/08-ci-baseline-planning.md" '^# CI Baseline Planning$' "CI baseline planning has expected heading"
 check_contains "docs/domain/00-domain-model.md" '^# Domain Model$' "domain model has expected heading"
 check_contains "docs/verification/00-verification-baseline.md" '^# Verification Baseline$' "verification baseline has expected heading"
 check_contains "docs/verification/01-repo-contract-baseline.md" '^# Repo Contract Baseline$' "repo contract baseline has expected heading"
@@ -335,6 +363,16 @@ check_contains "docs/work-packets/WP-0021-package-and-tooling-setup.md" 'bun.loc
 check_contains "docs/work-packets/WP-0021-package-and-tooling-setup.md" 'bun run verify' "WP-0021 references bun run verify"
 check_contains "docs/work-packets/WP-0022-package-manager-adr-correction.md" 'ADR-0023' "WP-0022 references ADR-0023"
 check_contains "docs/work-packets/WP-0023-repo-contract-script-bun-tooling-update.md" 'Repo Contract Script Bun Tooling Update' "WP-0023 records repo contract Bun update"
+
+print_header "CI planning anchors"
+
+check_contains "docs/planning/08-ci-baseline-planning.md" 'GitHub Actions' "CI baseline planning selects GitHub Actions"
+check_contains "docs/planning/08-ci-baseline-planning.md" 'bun install --frozen-lockfile' "CI baseline planning uses frozen Bun install"
+check_contains "docs/planning/08-ci-baseline-planning.md" 'bun run verify' "CI baseline planning runs Bun verification"
+check_contains "docs/planning/08-ci-baseline-planning.md" 'git diff --check' "CI baseline planning checks whitespace"
+check_contains "docs/planning/08-ci-baseline-planning.md" 'Runtime implementation has not started' "CI baseline planning preserves runtime-not-started boundary"
+check_contains "docs/work-packets/WP-0025-ci-baseline-planning.md" 'CI Baseline Planning' "WP-0025 records CI baseline planning"
+check_contains "docs/work-packets/WP-0026-ci-workflow-baseline.md" 'CI Workflow Baseline' "WP-0026 records CI workflow baseline"
 
 print_header "Whitespace safety"
 

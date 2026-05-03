@@ -1,0 +1,548 @@
+# Ordered Scope Map for the Agentic Software Framework
+
+Yes. Think of the project as a set of **nested scopes**. The broadest scope is the full product. The narrowest scope is the single atomic commit we are working toward at any given moment.
+
+```text
+Product Scope
+→ Repository Scope
+→ Phase Scope
+→ Workstream Scope
+→ Work Packet Scope
+→ Commit Scope
+```
+
+---
+
+## 1. Product Scope — Entire Agentic Software Framework
+
+This is the full product we are building.
+
+The **Agentic Software Framework** is a repository-governed framework for disciplined AI-assisted software development.
+
+It includes, ultimately:
+
+```text
+product/SDLC system
+architecture and ADR governance
+repository-based context continuity
+work packets
+verification model
+repo contract testing
+Foundry Control Plane
+directive compiler and work protocols
+evaluation harness
+future runtime implementation
+future retrieval/vector support
+future tooling/CLI/app surfaces
+future CI/dev workflow
+future security and access controls
+```
+
+This is the **largest scope**.
+
+Everything else is a smaller slice of this.
+
+---
+
+## 2. Repository Scope — The Current Repo as Source of Truth
+
+The repository is the durable home for the framework.
+
+The current repository scope includes:
+
+```text
+root governance files
+product documents
+architecture documents
+ADR documents
+domain documents
+planning documents
+verification documents
+work-packet documents
+AI/context-continuity documents
+future source code
+future scripts
+future tests
+future CI
+future runtime implementation
+```
+
+Important rule:
+
+```text
+The uploaded repository tree is the active baseline.
+```
+
+That means we do **not** silently replace the repo with a cleaner imagined version. We move forward from the actual accepted tree.
+
+---
+
+## 3. Current Phase Scope — Baseline Stabilization
+
+This is the phase we are in **right now**.
+
+The goal is not runtime code yet.
+
+The goal is:
+
+```text
+make the repository understandable
+make the baseline explicit
+preserve the ADR lineage
+define work-packet governance
+define planning/domain/verification/context baselines
+prepare for executable repo contract checks
+prepare for governed implementation
+```
+
+Current phase name:
+
+```text
+Baseline Stabilization
+```
+
+Current phase includes:
+
+```text
+WP-0001 Work Packet Template
+WP-0002 Baseline Inventory and Consistency Review
+WP-0003 Domain Model Baseline
+WP-0004 Planning Baseline
+WP-0005 Repository Verification Baseline
+WP-0006 ADR Index Normalization Review
+WP-0007 Repo Contract Testing Baseline
+WP-0008 Context Continuity Baseline
+WP-0009 Root README Baseline
+```
+
+The next likely item is:
+
+```text
+WP-0010 Architecture Overview Placement Review
+```
+
+---
+
+## 4. Baseline Governance Scope
+
+This scope answers:
+
+> What is in the repo, what is authoritative, what caveats exist, and what must not be silently changed?
+
+It includes:
+
+```text
+docs/planning/00-baseline-inventory.md
+docs/planning/02-adr-normalization-review.md
+README.md
+tree
+ADR caveat tracking
+architecture overview placement caveat
+root README caveat, now resolved by WP-0009
+```
+
+Known baseline caveats include:
+
+```text
+ADR-0007, ADR-0009, ADR-0010, and ADR-0012 are absent
+ADR-0013 and ADR-0015 appear to overlap by topic
+docs/product/00-architecture-overview.md and docs/architecture/00-architecture-overview.md both exist
+tree exists at the repository root
+executable repo contract checks do not exist yet
+runtime implementation has not started
+```
+
+---
+
+## 5. Work Packet Scope
+
+This scope governs **how work gets done**.
+
+Work packets are the atomic execution units of the project.
+
+They live in:
+
+```text
+docs/work-packets/
+```
+
+A work packet defines:
+
+```text
+purpose
+source inputs
+scope
+non-goals
+assumptions
+constraints
+risks
+affected files
+implementation plan
+acceptance criteria
+verification plan
+security/privacy notes
+completion record
+recommended atomic commit
+follow-up work
+```
+
+The work-packet scope prevents us from doing vague, uncontrolled, mixed work.
+
+---
+
+## 6. Planning Scope
+
+This scope turns the product vision and repository baseline into ordered future work.
+
+It currently includes:
+
+```text
+docs/planning/00-baseline-inventory.md
+docs/planning/01-planning-baseline.md
+docs/planning/02-adr-normalization-review.md
+```
+
+Future planning may include:
+
+```text
+epics
+requirements map
+backlog
+milestone plan
+implementation readiness checklist
+release slice plan
+```
+
+Planning scope is not runtime implementation. It exists to make implementation orderly.
+
+---
+
+## 7. Domain Scope
+
+This scope defines the conceptual model of the product.
+
+It currently lives in:
+
+```text
+docs/domain/00-domain-model.md
+```
+
+It covers concepts such as:
+
+```text
+Repository
+RepositoryBaseline
+ADR
+WorkPacket
+FoundryControlPlane
+DirectiveCompiler
+RepoContract
+EvaluationHarness
+ContextArtifact
+VectorCollection
+AccessTier
+CleanRoomReview
+EventBus
+```
+
+The domain scope helps us understand the system before writing code.
+
+---
+
+## 8. Verification Scope
+
+This scope defines how we know work is valid.
+
+It currently includes:
+
+```text
+docs/verification/00-verification-baseline.md
+docs/verification/01-repo-contract-baseline.md
+```
+
+Current verification scope is still documentation-level.
+
+It defines checks for:
+
+```text
+required root files
+required documentation directories
+product docs
+architecture docs
+ADR files
+work-packet files
+planning docs
+domain docs
+verification docs
+known allowed exceptions
+git diff --check
+```
+
+What does **not** exist yet:
+
+```text
+executable verification script
+repo contract test runner
+CI workflow
+runtime tests
+package-manager checks
+```
+
+---
+
+## 9. Context Continuity Scope
+
+This scope ensures future humans and AI sessions can resume from the repository.
+
+It currently includes:
+
+```text
+docs/ai/00-current-state.md
+docs/ai/01-handoff-packet-template.md
+docs/ai/02-context-source-rules.md
+```
+
+It answers:
+
+```text
+Where should a future session start?
+Which files are authoritative?
+Which caveats must be preserved?
+What should not be silently changed?
+What is the next recommended work?
+```
+
+Key rule:
+
+```text
+Vector retrieval augments repository memory; it does not replace it.
+```
+
+---
+
+## 10. ADR Governance Scope
+
+This scope governs architecture decisions.
+
+It includes:
+
+```text
+docs/adr/README.md
+docs/adr/ADR-TEMPLATE.md
+docs/adr/ADR-*.md
+```
+
+Current ADR governance scope includes preserving:
+
+```text
+existing ADR numbers
+existing ADR filenames
+known ADR gaps
+known ADR overlaps
+decision history
+```
+
+Current rule:
+
+```text
+Do not rename, renumber, delete, fill, or supersede ADRs without an explicit future work packet.
+```
+
+---
+
+## 11. Near-Term Stabilization Scope
+
+This is the scope immediately ahead of us.
+
+Likely next work packets:
+
+```text
+WP-0010 Architecture Overview Placement Review
+WP-0011 Baseline Tree Artifact Policy
+WP-0012 ADR Index Gap and Status Annotation
+WP-0013 Persistence ADR Overlap Review
+WP-0014 Executable Repo Contract Script
+WP-0015 Evaluation Harness Baseline
+```
+
+These still belong mostly to **baseline stabilization / implementation readiness**, not runtime product code.
+
+---
+
+## 12. Implementation Readiness Scope
+
+This comes after baseline stabilization.
+
+The goal will be to make the repo ready for code.
+
+It will likely include:
+
+```text
+tooling directory decisions
+executable repo contract script
+local verification command
+package-manager setup
+dependency pinning
+language/runtime boundaries
+initial module map
+initial source directory layout
+CI skeleton
+developer workflow
+commit hooks if desired
+```
+
+This is the bridge between documentation baseline and actual implementation.
+
+---
+
+## 13. Runtime Implementation Scope
+
+This is future work.
+
+Runtime implementation may include:
+
+```text
+Foundry Control Plane implementation
+work-packet lifecycle engine
+directive compiler
+work protocol models
+repo contract runner
+context pack generation
+handoff generation
+retrieval integration
+event bus / notification router
+evaluation harness
+CLI or UI surfaces
+Git/repository integration
+storage and persistence layers
+```
+
+This is in the **product scope**, but not in the **current phase scope** yet.
+
+---
+
+## 14. Retrieval and Memory Scope
+
+This is future implementation work based on current ADRs.
+
+It may include:
+
+```text
+canonical repository context
+structured metadata persistence
+vector retrieval
+Qdrant or equivalent vector storage
+embedding records
+retrieval evaluation
+context pack assembly
+source citation / source-path preservation
+```
+
+Important boundary:
+
+```text
+The repository remains canonical.
+Retrieval helps find and assemble context.
+Retrieval does not replace the repo.
+```
+
+---
+
+## 15. Evaluation Harness Scope
+
+This is future quality and testing work.
+
+It may include:
+
+```text
+evaluation cases
+evaluation scenarios
+expected outputs
+observed outputs
+context continuity tests
+agent execution tests
+repo contract tests
+retrieval quality tests
+regression records
+quality metrics
+```
+
+This is not built yet. It is planned by the ADR/domain/planning baseline.
+
+---
+
+## 16. Security and Safety Scope
+
+This spans the entire project.
+
+It includes:
+
+```text
+access tier model
+clean-room pattern adoption
+secret avoidance
+sensitive file exclusions
+repository access boundaries
+AI context exclusions
+future redaction rules
+future approval gates
+future audit/event records
+```
+
+Current rule:
+
+```text
+Do not introduce secrets, credentials, tokens, private keys, private infrastructure values, or sensitive operational details.
+```
+
+---
+
+## 17. Current Out-of-Scope Items
+
+These are **not** in the current phase scope yet:
+
+```text
+runtime application code
+database schema
+API implementation
+CLI implementation
+web UI
+vector database setup
+Qdrant collections
+embedding pipeline
+agent runtime
+event bus implementation
+directive compiler implementation
+evaluation harness implementation
+package-manager setup
+CI workflows
+deployment infrastructure
+billing
+authentication
+production operations
+```
+
+They remain in the **larger product scope**, but not in the current execution scope.
+
+---
+
+## 18. The Practical Mental Model
+
+Right now, we are here:
+
+```text
+Full Product: Agentic Software Framework
+  Current Repo: accepted uploaded-tree baseline
+    Current Phase: Baseline Stabilization
+      Current Workstream: repo orientation / governance / verification / continuity
+        Current Work Packet: WP-0009 just produced, next WP-0010
+          Current Commit: docs(project): add root readme baseline
+```
+
+So the best short version is:
+
+```text
+We are building the whole Agentic Software Framework,
+but right now we are stabilizing the repository foundation
+so future implementation can happen through governed, verifiable work packets.
+```

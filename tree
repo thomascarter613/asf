@@ -1,0 +1,41 @@
+.
+├── CODEOWNERS
+├── CONTRIBUTING.md
+├── docs
+│   ├── adr
+│   │   ├── ADR-0001-adopt-architecture-decision-records-as-a-first-class-engineering-artifact.md
+│   │   ├── ADR-0002-repository-based-context-continuity.md
+│   │   ├── ADR-0003-repository-topology-bounded-monorepos-over-monolith-or-full-fragmentation.md
+│   │   ├── ADR-0004-access-tier-model-four-tier-repository-classification.md
+│   │   ├── ADR-0005-clean-room-architecture-and-pattern-adoption.md
+│   │   ├── ADR-0006-canonical-repository-plus-vector-retrieval.md
+│   │   ├── ADR-0008-foundry-control-plane.md
+│   │   ├── ADR-0011-dependency-pinning-policy-exact-lockfiles-committed-for-all-ecosystems.md
+│   │   ├── ADR-0013-polyglot-persistence-and-qdrant-retrieval.md
+│   │   ├── ADR-0014-polyglot-language-strategy-python-for-ml-rust-for-serving-typescript-for-product.md
+│   │   ├── ADR-0015-polyglot-persistence-and-qdrant-retrieval.md
+│   │   ├── ADR-0016-worktree-based-parallel-execution.md
+│   │   ├── ADR-0017-foundry-event-bus-and-notification-router.md
+│   │   ├── ADR-0018-work-packet-lifecycle.md
+│   │   ├── ADR-0019-primary-package-managers-uv-cargo-and-pnpm.md
+│   │   ├── ADR-0020-directive-compiler-and-work-protocols.md
+│   │   ├── ADR-0021-repo-contract-testing.md
+│   │   ├── ADR-0022-evaluation-harness-for-context-continuity-and-agent-execution.md
+│   │   ├── ADR-TEMPLATE.md
+│   │   └── README.md
+│   ├── architecture
+│   │   └── 00-architecture-overview.md
+│   ├── domain
+│   ├── planning
+│   ├── product
+│   │   ├── 00-architecture-overview.md
+│   │   ├── 00-product-inception-brief.md
+│   │   ├── 01-product-charter.md
+│   │   ├── 02-stakeholder-and-user-model.md
+│   │   └── 03-software-requirements-specification.md
+│   └── work-packets
+├── LICENSE
+├── SECURITY.md
+└── tree
+
+8 directories, 31 files

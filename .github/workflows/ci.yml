@@ -27,5 +27,8 @@ jobs:
       - name: Verify repository
         run: bun run verify
 
+      - name: Run executable evaluation harness
+        run: bash tools/eval/run-evaluations.sh
+
       - name: Check whitespace
         run: git diff --check

@@ -1,0 +1,20 @@
+{
+  "id": "EVAL-0016",
+  "title": "Work packet frontmatter parser warning hardening exists",
+  "category": "runtime-package-core",
+  "status": "active",
+  "required": true,
+  "purpose": "Verify that the work-packet frontmatter parser suppresses warning noise for known ASF metadata fields and YAML-style continuations while preserving warnings for truly unknown metadata.",
+  "checks": [
+    { "type": "file_exists", "path": "packages/work-packet-core/src/work-packet-frontmatter.ts" },
+    { "type": "file_exists", "path": "packages/work-packet-core/src/work-packet-frontmatter.test.ts" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/work-packet-frontmatter.ts", "pattern": "KNOWN_IGNORED_FRONTMATTER_KEYS" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/work-packet-frontmatter.ts", "pattern": "IgnoredFrontmatterBlock" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/work-packet-frontmatter.ts", "pattern": "isIgnoredBlockContinuation" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/work-packet-frontmatter.ts", "pattern": "related_packages" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/work-packet-frontmatter.ts", "pattern": "decision_authority" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/work-packet-frontmatter.test.ts", "pattern": "ignores known ASF folded block metadata without warnings" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/work-packet-frontmatter.test.ts", "pattern": "still warns on unknown block keys while suppressing duplicate continuation warnings" },
+    { "type": "command_succeeds", "command": "bun test packages/work-packet-core" }
+  ]
+}

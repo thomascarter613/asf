@@ -33,8 +33,19 @@ const KNOWN_IGNORED_FRONTMATTER_KEYS = new Set([
   "backlog_refs",
   "adr_refs",
   "related_documents",
+  "related_packages",
   "affected_files",
+  "decision_authority",
+  "type",
+  "scope",
+  "phase",
+  "commit",
 ]);
+
+interface IgnoredFrontmatterBlock {
+  key: string;
+  indent: number;
+}
 
 function createIssue(
   code: string,
@@ -52,6 +63,10 @@ function createIssue(
 
 function splitLines(value: string): string[] {
   return value.split(/\r?\n/);
+}
+
+function indentLength(value: string): number {
+  return value.length - value.trimStart().length;
 }
 
 function stripWrappingQuotes(value: string): string {
@@ -76,6 +91,27 @@ function isUnsupportedComplexValue(value: string): boolean {
     trimmed === "|" ||
     trimmed === ">"
   );
+}
+
+function isIgnoredBlockContinuation(
+  line: string,
+  ignoredBlock: IgnoredFrontmatterBlock | undefined,
+): boolean {
+  if (ignoredBlock === undefined) {
+    return false;
+  }
+
+  const trimmed = line.trim();
+
+  if (trimmed.length === 0 || trimmed.startsWith("#")) {
+    return true;
+  }
+
+  if (trimmed.startsWith("- ")) {
+    return true;
+  }
+
+  return indentLength(line) > ignoredBlock.indent;
 }
 
 function setMetadataValue(
@@ -193,7 +229,7 @@ export function parseWorkPacketFrontmatter(
     .join("\n")
     .replace(/^\n/, "");
 
-  let ignoredBlockKey: string | undefined;
+  let ignoredBlock: IgnoredFrontmatterBlock | undefined;
 
   frontmatterLines.forEach((line, index) => {
     const trimmed = line.trim();
@@ -202,24 +238,11 @@ export function parseWorkPacketFrontmatter(
       return;
     }
 
-    if (trimmed.startsWith("- ")) {
-      if (ignoredBlockKey !== undefined) {
-        return;
-      }
-
-      warnings.push(
-        createIssue(
-          "unsupported-frontmatter-value",
-          "Array frontmatter values are not supported by the dependency-free parser.",
-          `frontmatter.line.${index + 2}`,
-          "warning",
-        ),
-      );
-
+    if (isIgnoredBlockContinuation(line, ignoredBlock)) {
       return;
     }
 
-    ignoredBlockKey = undefined;
+    ignoredBlock = undefined;
 
     const separatorIndex = trimmed.indexOf(":");
 
@@ -241,7 +264,10 @@ export function parseWorkPacketFrontmatter(
 
     if (KNOWN_IGNORED_FRONTMATTER_KEYS.has(key)) {
       if (rawValue.length === 0 || isUnsupportedComplexValue(rawValue)) {
-        ignoredBlockKey = key;
+        ignoredBlock = {
+          key,
+          indent: indentLength(line),
+        };
       }
 
       return;
@@ -249,7 +275,10 @@ export function parseWorkPacketFrontmatter(
 
     if (!SUPPORTED_FRONTMATTER_KEYS.has(key)) {
       if (rawValue.length === 0) {
-        ignoredBlockKey = key;
+        ignoredBlock = {
+          key,
+          indent: indentLength(line),
+        };
       }
 
       warnings.push(

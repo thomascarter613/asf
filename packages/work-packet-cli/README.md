@@ -28,6 +28,36 @@ bun run work-packet help
 bun run work-packet validate --help
 ```
 
+## Output Formats
+
+The default output format is human-readable plain text:
+
+```bash
+bun run work-packet validate <path>
+bun run work-packet validate <path> --format text
+```
+
+The CLI also supports explicit JSON validation output for one caller-provided file:
+
+```bash
+bun run work-packet validate <path> --format json
+bun run work-packet validate <path> --format=json
+```
+
+The JSON output mode is intended for automation and includes:
+
+- schema version,
+- command name,
+- pass/fail result,
+- validity boolean,
+- validated path,
+- parsed metadata,
+- summary counts,
+- validation errors,
+- validation warnings.
+
+Usage errors and unexpected runtime errors remain plain text in the current baseline.
+
 ## Exit Codes
 
 ```text
@@ -37,7 +67,7 @@ USAGE_ERROR = 2
 UNEXPECTED_ERROR = 3
 ```
 
-## Output
+## Plain-Text Output
 
 Valid files print:
 
@@ -53,8 +83,34 @@ FAIL
 
 Errors and warnings are printed as plain text.
 
+## JSON Output
+
+Valid files in JSON mode print a JSON object with this general shape:
+
+```json
+{
+  "schemaVersion": "asf.work-packet.validation-result.v1",
+  "command": "validate",
+  "result": "pass",
+  "valid": true,
+  "path": "docs/work-packets/WP-0043-work-packet-file-loading-runtime-baseline.md",
+  "metadata": {
+    "id": "WP-0043",
+    "title": "Work Packet File Loading Runtime Baseline"
+  },
+  "summary": {
+    "errorCount": 0,
+    "warningCount": 0
+  },
+  "errors": [],
+  "warnings": []
+}
+```
+
+Invalid files in JSON mode still exit with `VALIDATION_FAILED = 1`.
+
 ## Boundary
 
 The CLI validates exactly one caller-provided file path.
 
-It does not walk directories, validate globs, recursively scan repositories, read `.env` files by default, inspect secrets, access the network, execute file contents, or evaluate parsed values.
+It does not walk directories, validate globs, recursively scan repositories, read `.env` files by default, inspect secrets, access the network, execute file contents, evaluate parsed values, write output files, or automatically fix Markdown.

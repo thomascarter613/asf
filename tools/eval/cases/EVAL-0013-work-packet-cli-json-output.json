@@ -1,0 +1,21 @@
+{
+  "id": "EVAL-0013",
+  "title": "Work packet CLI JSON output exists",
+  "category": "runtime-package-cli",
+  "status": "active",
+  "required": true,
+  "purpose": "Verify that the work-packet CLI supports explicit JSON output for one caller-provided work-packet file without replacing the default plain-text output.",
+  "checks": [
+    { "type": "file_exists", "path": "packages/work-packet-cli/src/format.ts" },
+    { "type": "file_exists", "path": "packages/work-packet-cli/src/cli.ts" },
+    { "type": "file_exists", "path": "packages/work-packet-cli/src/cli.test.ts" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/src/format.ts", "pattern": "WORK_PACKET_VALIDATION_JSON_SCHEMA_VERSION" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/src/format.ts", "pattern": "formatWorkPacketValidationJsonResult" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/src/format.ts", "pattern": "toWorkPacketValidationJsonResult" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/src/cli.ts", "pattern": "--format json" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/src/cli.ts", "pattern": "--format=json" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/src/cli.test.ts", "pattern": "JSON.parse" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/README.md", "pattern": "bun run work-packet validate <path> --format json" },
+    { "type": "command_succeeds", "command": "bun test packages/work-packet-cli" }
+  ]
+}

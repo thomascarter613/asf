@@ -30,6 +30,16 @@ check_file() {
   fi
 }
 
+check_absent_file() {
+  local path="$1"
+
+  if [[ ! -e "$path" ]]; then
+    pass "file is absent as required: $path"
+  else
+    fail "forbidden file exists: $path"
+  fi
+}
+
 check_dir() {
   local path="$1"
 
@@ -67,6 +77,23 @@ check_contains() {
   fi
 }
 
+check_not_contains() {
+  local path="$1"
+  local pattern="$2"
+  local label="$3"
+
+  if [[ ! -f "$path" ]]; then
+    fail "cannot check absence because file is missing: $path"
+    return
+  fi
+
+  if grep -q -- "$pattern" "$path"; then
+    fail "$label"
+  else
+    pass "$label"
+  fi
+}
+
 check_git_diff_whitespace() {
   if git diff --check; then
     pass "git diff --check"
@@ -100,6 +127,19 @@ check_file "LICENSE"
 check_file "SECURITY.md"
 check_file "README.md"
 check_file "tree"
+
+print_header "Package and tooling root files"
+
+check_file "package.json"
+check_file "bun.lock"
+check_absent_file "pnpm-workspace.yaml"
+check_absent_file "pnpm-lock.yaml"
+
+print_header "Package script contract"
+
+check_contains "package.json" '"verify": "bun run verify:repo"' "package.json defines verify through bun"
+check_contains "package.json" '"verify:repo": "bash tools/check-repo-contract.sh"' "package.json defines verify:repo through repo contract script"
+check_not_contains "package.json" 'pnpm' "package.json does not reference pnpm"
 
 print_header "Required directories"
 
@@ -151,11 +191,26 @@ check_file "docs/adr/ADR-0019-primary-package-managers-uv-cargo-and-pnpm.md"
 check_file "docs/adr/ADR-0020-directive-compiler-and-work-protocols.md"
 check_file "docs/adr/ADR-0021-repo-contract-testing.md"
 check_file "docs/adr/ADR-0022-evaluation-harness-for-context-continuity-and-agent-execution.md"
+check_file "docs/adr/ADR-0023-primary-package-managers-bun-uv-and-cargo.md"
 
 print_header "Allowed ADR gaps"
 
 printf 'INFO: ADR-0007, ADR-0009, ADR-0010, and ADR-0012 are known allowed gaps and are not required by this script.\n'
 pass "known ADR gaps are intentionally allowed"
+
+print_header "ADR history and supersession anchors"
+
+check_contains "docs/adr/README.md" 'ADR-0007' "ADR index records ADR-0007 gap"
+check_contains "docs/adr/README.md" 'ADR-0009' "ADR index records ADR-0009 gap"
+check_contains "docs/adr/README.md" 'ADR-0010' "ADR index records ADR-0010 gap"
+check_contains "docs/adr/README.md" 'ADR-0012' "ADR index records ADR-0012 gap"
+check_contains "docs/adr/README.md" 'ADR-0013' "ADR index records ADR-0013"
+check_contains "docs/adr/README.md" 'ADR-0015' "ADR index records ADR-0015"
+check_contains "docs/adr/README.md" 'ADR-0019' "ADR index records ADR-0019"
+check_contains "docs/adr/README.md" 'ADR-0023' "ADR index records ADR-0023"
+check_contains "docs/adr/README.md" 'superseded by ADR-0023' "ADR index records ADR-0019 supersession by ADR-0023"
+check_contains "docs/adr/ADR-0023-primary-package-managers-bun-uv-and-cargo.md" 'Supersedes: ADR-0019' "ADR-0023 explicitly supersedes ADR-0019"
+check_contains "docs/adr/ADR-0023-primary-package-managers-bun-uv-and-cargo.md" 'Bun is the canonical JavaScript/TypeScript package manager' "ADR-0023 makes Bun canonical"
 
 print_header "Planning documents"
 
@@ -211,6 +266,9 @@ check_file "docs/work-packets/WP-0017-current-state-and-readme-status-update.md"
 check_file "docs/work-packets/WP-0018-implementation-readiness-planning.md"
 check_file "docs/work-packets/WP-0019-package-and-tooling-baseline.md"
 check_file "docs/work-packets/WP-0020-repo-contract-script-readiness-update.md"
+check_file "docs/work-packets/WP-0021-package-and-tooling-setup.md"
+check_file "docs/work-packets/WP-0022-package-manager-adr-correction.md"
+check_file "docs/work-packets/WP-0023-repo-contract-script-bun-tooling-update.md"
 
 print_header "Script self-check"
 
@@ -247,12 +305,6 @@ check_contains "docs/ai/00-current-state.md" 'The uploaded repository tree is th
 check_contains "docs/ai/00-current-state.md" 'tools/check-repo-contract.sh' "current state records repo contract script"
 check_contains "docs/ai/00-current-state.md" 'docs/verification/02-evaluation-harness-baseline.md' "current state records evaluation harness baseline"
 check_contains "docs/ai/02-context-source-rules.md" 'Vector retrieval augments repository memory' "context source rules preserve vector retrieval boundary"
-check_contains "docs/adr/README.md" 'ADR-0007' "ADR index records ADR-0007 gap"
-check_contains "docs/adr/README.md" 'ADR-0009' "ADR index records ADR-0009 gap"
-check_contains "docs/adr/README.md" 'ADR-0010' "ADR index records ADR-0010 gap"
-check_contains "docs/adr/README.md" 'ADR-0012' "ADR index records ADR-0012 gap"
-check_contains "docs/adr/README.md" 'ADR-0013' "ADR index records ADR-0013"
-check_contains "docs/adr/README.md" 'ADR-0015' "ADR index records ADR-0015"
 check_contains "docs/verification/01-repo-contract-baseline.md" 'Known Allowed Exceptions' "repo contract baseline records known allowed exceptions"
 check_contains "docs/planning/03-architecture-overview-placement-review.md" 'Prohibited Automatic Actions' "architecture placement review records prohibited automatic actions"
 check_contains "docs/planning/04-baseline-tree-artifact-policy.md" 'Prohibited Automatic Actions' "baseline tree policy records prohibited automatic actions"
@@ -275,11 +327,14 @@ check_contains "docs/planning/06-implementation-readiness-plan.md" 'Prohibited P
 
 print_header "Package and tooling anchors"
 
-check_contains "docs/planning/07-package-and-tooling-baseline.md" 'Package-Manager Strategy' "package and tooling baseline defines package-manager strategy"
-check_contains "docs/planning/07-package-and-tooling-baseline.md" 'Lockfile Expectations' "package and tooling baseline defines lockfile expectations"
-check_contains "docs/planning/07-package-and-tooling-baseline.md" 'Local Command Categories' "package and tooling baseline defines local command categories"
-check_contains "docs/planning/07-package-and-tooling-baseline.md" 'Repo Contract Integration' "package and tooling baseline defines repo contract integration"
-check_contains "docs/planning/07-package-and-tooling-baseline.md" 'Prohibited Premature Work' "package and tooling baseline defines prohibited premature work"
+check_contains "docs/planning/07-package-and-tooling-baseline.md" 'Bun' "package and tooling baseline references Bun"
+check_contains "docs/planning/07-package-and-tooling-baseline.md" 'bun.lock' "package and tooling baseline references bun.lock"
+check_contains "docs/planning/07-package-and-tooling-baseline.md" 'pnpm-workspace.yaml' "package and tooling baseline records forbidden pnpm workspace file"
+check_contains "docs/planning/07-package-and-tooling-baseline.md" 'pnpm-lock.yaml' "package and tooling baseline records forbidden pnpm lockfile"
+check_contains "docs/work-packets/WP-0021-package-and-tooling-setup.md" 'bun.lock' "WP-0021 references bun.lock"
+check_contains "docs/work-packets/WP-0021-package-and-tooling-setup.md" 'bun run verify' "WP-0021 references bun run verify"
+check_contains "docs/work-packets/WP-0022-package-manager-adr-correction.md" 'ADR-0023' "WP-0022 references ADR-0023"
+check_contains "docs/work-packets/WP-0023-repo-contract-script-bun-tooling-update.md" 'Repo Contract Script Bun Tooling Update' "WP-0023 records repo contract Bun update"
 
 print_header "Whitespace safety"
 

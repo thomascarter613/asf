@@ -6,6 +6,13 @@ import { parseValidateArgs, runWorkPacketCli } from "./cli";
 import { WORK_PACKET_CLI_EXIT_CODES } from "./exit-codes";
 import { WORK_PACKET_VALIDATION_JSON_SCHEMA_VERSION } from "./format";
 import { resolveSafeWorkPacketPath } from "./path-policy";
+import {
+  discoverRepositoryWorkPackets,
+  WORK_PACKET_DISCOVERY_ROOT,
+} from "./repository-discovery";
+import { validateRepositoryWorkPackets } from "./repository-validation";
+
+
 
 const validDocument = `---
 title: "WP-0046: Work Packet CLI Runtime Baseline"
@@ -90,6 +97,46 @@ Run Bun tests.
 feat(work-packet): add validation cli
 `;
 
+function createValidWorkPacketDocument(id: string, title = `${id}: Test Work Packet`): string {
+  return `---
+id: "${id}"
+title: "${title}"
+status: "ready"
+version: "0.1.0"
+owner: "Project Steward"
+document_type: "work-packet"
+work_packet_id: "${id}"
+recommended_commit: "test(work-packet): validate ${id}"
+---
+
+# ${title}
+
+## 1. Purpose
+
+Validate repository work-packet behavior.
+
+## 2. Scope
+
+Exercise repo-wide work-packet validation.
+
+## 3. Non-Goals
+
+Do not test unrelated CLI behavior.
+
+## 4. Acceptance Criteria
+
+The repository validation command produces the expected result.
+
+## 5. Verification Commands
+
+Run Bun tests.
+
+## 6. Recommended Atomic Commit
+
+test(work-packet): validate ${id}
+`;
+}
+
 interface ParsedJsonValidationResult {
   schemaVersion: string;
   command: string;
@@ -131,6 +178,14 @@ async function writeTempFile(
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, content, "utf8");
   return path;
+}
+
+async function writeRepoWorkPacket(
+  root: string,
+  filename: string,
+  content: string,
+): Promise<string> {
+  return writeTempFile(root, `${WORK_PACKET_DISCOVERY_ROOT}/${filename}`, content);
 }
 
 async function withTempWorkspace<T>(
@@ -324,6 +379,189 @@ describe("parseValidateArgs", () => {
     ]);
 
     expect(result.error).toContain("Unknown option");
+  });
+});
+
+describe("discoverRepositoryWorkPackets", () => {
+  test("discovers canonical work-packet files in deterministic order", async () => {
+    await withTempWorkspace(async (root) => {
+      await writeRepoWorkPacket(
+        root,
+        "WP-0002-second-work-packet.md",
+        createValidWorkPacketDocument("WP-0002"),
+      );
+      await writeRepoWorkPacket(
+        root,
+        "WP-0001-first-work-packet.md",
+        createValidWorkPacketDocument("WP-0001"),
+      );
+      await writeTempFile(root, "docs/work-packets/README.md", "# Index\n");
+      await writeTempFile(
+        root,
+        "docs/work-packets/WORK-PACKET-TEMPLATE.md",
+        "# Template\n",
+      );
+
+      const result = await discoverRepositoryWorkPackets({ cwd: root });
+
+      expect(result.discoveryRootFound).toBe(true);
+      expect(result.errors).toHaveLength(0);
+      expect(result.files.map((file) => file.path)).toEqual([
+        "docs/work-packets/WP-0001-first-work-packet.md",
+        "docs/work-packets/WP-0002-second-work-packet.md",
+      ]);
+    });
+  });
+
+  test("reports malformed work-packet filenames", async () => {
+    await withTempWorkspace(async (root) => {
+      await writeTempFile(
+        root,
+        "docs/work-packets/WP-51-bad.md",
+        createValidWorkPacketDocument("WP-0051"),
+      );
+
+      const result = await discoverRepositoryWorkPackets({ cwd: root });
+
+      expect(result.files).toHaveLength(0);
+      expect(result.errors.some((issue) => issue.code === "malformed-work-packet-filename"))
+        .toBe(true);
+    });
+  });
+});
+
+describe("validateRepositoryWorkPackets", () => {
+  test("validates discovered repository work packets", async () => {
+    await withTempWorkspace(async (root) => {
+      await writeRepoWorkPacket(
+        root,
+        "WP-0001-first-work-packet.md",
+        createValidWorkPacketDocument("WP-0001"),
+      );
+
+      const result = await validateRepositoryWorkPackets({ cwd: root });
+
+      expect(result.valid).toBe(true);
+      expect(result.summary.discoveredFileCount).toBe(1);
+      expect(result.summary.validatedFileCount).toBe(1);
+      expect(result.summary.validFileCount).toBe(1);
+      expect(result.summary.invalidFileCount).toBe(0);
+      expect(result.summary.errorCount).toBe(0);
+    });
+  });
+
+  test("detects filename and frontmatter id mismatch", async () => {
+    await withTempWorkspace(async (root) => {
+      await writeRepoWorkPacket(
+        root,
+        "WP-0001-first-work-packet.md",
+        createValidWorkPacketDocument("WP-9999"),
+      );
+
+      const result = await validateRepositoryWorkPackets({ cwd: root });
+
+      expect(result.valid).toBe(false);
+      expect(
+        result.files[0]?.errors.some(
+          (issue) => issue.code === "work-packet-filename-id-mismatch",
+        ),
+      ).toBe(true);
+    });
+  });
+
+  test("detects duplicate work-packet ids", async () => {
+    await withTempWorkspace(async (root) => {
+      await writeRepoWorkPacket(
+        root,
+        "WP-0001-first-work-packet.md",
+        createValidWorkPacketDocument("WP-0001"),
+      );
+      await writeRepoWorkPacket(
+        root,
+        "WP-0002-second-work-packet.md",
+        createValidWorkPacketDocument("WP-0001"),
+      );
+
+      const result = await validateRepositoryWorkPackets({ cwd: root });
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((issue) => issue.code === "duplicate-work-packet-id"))
+        .toBe(true);
+    });
+  });
+});
+
+describe("runWorkPacketCli validate-repo", () => {
+  test("validate-repo --help exits success", async () => {
+    const result = await runWorkPacketCli(["validate-repo", "--help"]);
+
+    expect(result.exitCode).toBe(WORK_PACKET_CLI_EXIT_CODES.SUCCESS);
+    expect(result.stdout).toContain("Validate repository work-packet files.");
+    expect(result.stdout).toContain("docs/work-packets");
+  });
+
+  test("validate-repo exits success for valid repository work packets", async () => {
+    await withTempWorkspace(async (root) => {
+      await writeRepoWorkPacket(
+        root,
+        "WP-0001-first-work-packet.md",
+        createValidWorkPacketDocument("WP-0001"),
+      );
+
+      const result = await runWorkPacketCli(["validate-repo"], { cwd: root });
+
+      expect(result.exitCode).toBe(WORK_PACKET_CLI_EXIT_CODES.SUCCESS);
+      expect(result.stdout).toContain("PASS");
+      expect(result.stdout).toContain("Discovered Files: 1");
+      expect(result.stdout).toContain(
+        "docs/work-packets/WP-0001-first-work-packet.md",
+      );
+    });
+  });
+
+  test("validate-repo supports JSON output", async () => {
+    await withTempWorkspace(async (root) => {
+      await writeRepoWorkPacket(
+        root,
+        "WP-0001-first-work-packet.md",
+        createValidWorkPacketDocument("WP-0001"),
+      );
+
+      const result = await runWorkPacketCli(
+        ["validate-repo", "--format", "json"],
+        { cwd: root },
+      );
+      const json = JSON.parse(result.stdout) as {
+        command: string;
+        valid: boolean;
+        summary: {
+          discoveredFileCount: number;
+          validatedFileCount: number;
+        };
+      };
+
+      expect(result.exitCode).toBe(WORK_PACKET_CLI_EXIT_CODES.SUCCESS);
+      expect(json.command).toBe("validate-repo");
+      expect(json.valid).toBe(true);
+      expect(json.summary.discoveredFileCount).toBe(1);
+      expect(json.summary.validatedFileCount).toBe(1);
+    });
+  });
+
+  test("validate-repo rejects path arguments", async () => {
+    const result = await runWorkPacketCli(["validate-repo", "docs/work-packets"]);
+
+    expect(result.exitCode).toBe(WORK_PACKET_CLI_EXIT_CODES.USAGE_ERROR);
+    expect(result.stderr).toContain("does not accept path arguments");
+  });
+
+  test("validate-repo exits usage error when discovery root is missing", async () => {
+    await withTempWorkspace(async (root) => {
+      const result = await runWorkPacketCli(["validate-repo"], { cwd: root });
+
+      expect(result.exitCode).toBe(WORK_PACKET_CLI_EXIT_CODES.USAGE_ERROR);
+      expect(result.stderr).toContain("Missing work-packet discovery root");
+    });
   });
 });
 

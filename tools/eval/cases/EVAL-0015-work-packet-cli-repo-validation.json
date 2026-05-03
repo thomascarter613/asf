@@ -1,0 +1,22 @@
+{
+  "id": "EVAL-0015",
+  "title": "Work packet CLI repo-wide validation exists",
+  "category": "runtime-package-cli",
+  "status": "active",
+  "required": true,
+  "purpose": "Verify that the work-packet CLI includes a distinct repo-wide validation command with deterministic repository discovery and aggregate output.",
+  "checks": [
+    { "type": "file_exists", "path": "packages/work-packet-cli/src/repository-discovery.ts" },
+    { "type": "file_exists", "path": "packages/work-packet-cli/src/repository-validation.ts" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/src/repository-discovery.ts", "pattern": "WORK_PACKET_DISCOVERY_ROOT" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/src/repository-discovery.ts", "pattern": "WORK_PACKET_FILENAME_PATTERN" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/src/repository-validation.ts", "pattern": "validateRepositoryWorkPackets" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/src/cli.ts", "pattern": "validate-repo" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/src/cli.ts", "pattern": "parseValidateRepoArgs" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/src/format.ts", "pattern": "WORK_PACKET_REPOSITORY_VALIDATION_JSON_SCHEMA_VERSION" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/src/format.ts", "pattern": "formatWorkPacketRepositoryValidationResult" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/src/cli.test.ts", "pattern": "validate-repo exits success for valid repository work packets" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/README.md", "pattern": "bun run work-packet validate-repo" },
+    { "type": "command_succeeds", "command": "bun test packages/work-packet-cli" }
+  ]
+}

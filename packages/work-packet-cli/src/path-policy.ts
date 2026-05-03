@@ -13,7 +13,7 @@ export interface SafeWorkPacketPathResult {
   error?: string;
 }
 
-function isPathInsideRoot(root: string, target: string): boolean {
+export function isPathInsideRoot(root: string, target: string): boolean {
   const relativePath = relative(root, target);
 
   return (

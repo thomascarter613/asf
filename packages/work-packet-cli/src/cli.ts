@@ -1,10 +1,12 @@
 import { validateWorkPacketFile } from "@asf/work-packet-core";
 import { WORK_PACKET_CLI_EXIT_CODES } from "./exit-codes";
 import {
+  formatWorkPacketRepositoryValidationResult,
   formatWorkPacketValidationResult,
   type WorkPacketCliOutputFormat,
 } from "./format";
 import { resolveSafeWorkPacketPath } from "./path-policy";
+import { validateRepositoryWorkPackets } from "./repository-validation";
 
 export interface WorkPacketCliResult {
   exitCode: number;
@@ -23,15 +25,23 @@ interface ValidateArgsParseResult {
   error?: string;
 }
 
+interface ValidateRepoArgsParseResult {
+  format: WorkPacketCliOutputFormat;
+  helpRequested: boolean;
+  error?: string;
+}
+
 const ROOT_HELP = `Agentic Software Framework Work Packet CLI
 
 Usage:
   bun run work-packet --help
   bun run work-packet help
   bun run work-packet validate <path> [--format text|json]
+  bun run work-packet validate-repo [--format text|json]
 
 Commands:
   validate <path>   Validate one work-packet Markdown file.
+  validate-repo     Discover and validate repository work-packet files.
   help              Show this help text.
 
 Exit Codes:
@@ -43,6 +53,8 @@ Exit Codes:
 Examples:
   bun run work-packet validate docs/work-packets/WP-0043-work-packet-file-loading-runtime-baseline.md
   bun run work-packet validate docs/work-packets/WP-0043-work-packet-file-loading-runtime-baseline.md --format json
+  bun run work-packet validate-repo
+  bun run work-packet validate-repo --format json
 `;
 
 const VALIDATE_HELP = `Validate a work-packet Markdown file.
@@ -74,6 +86,35 @@ Exit Codes:
   3  UNEXPECTED_ERROR
 `;
 
+const VALIDATE_REPO_HELP = `Validate repository work-packet files.
+
+Usage:
+  bun run work-packet validate-repo
+  bun run work-packet validate-repo --format text
+  bun run work-packet validate-repo --format json
+  bun run work-packet validate-repo --format=json
+  bun run work-packet validate-repo --help
+
+Discovery:
+  docs/work-packets/ direct children matching WP-0000-descriptive-slug.md
+
+Options:
+  --format text     Print human-readable plain-text aggregate output. This is the default.
+  --format json     Print machine-readable JSON aggregate validation output.
+  --format=json     Equivalent to --format json.
+
+Output:
+  PASS              All discovered work-packet files are valid and no discovery errors exist.
+  FAIL              One or more discovered files or discovery rules failed.
+  JSON              A repository validation result object in json mode.
+
+Exit Codes:
+  0  SUCCESS
+  1  VALIDATION_FAILED
+  2  USAGE_ERROR
+  3  UNEXPECTED_ERROR
+`;
+
 function success(stdout: string): WorkPacketCliResult {
   return {
     exitCode: WORK_PACKET_CLI_EXIT_CODES.SUCCESS,
@@ -95,6 +136,14 @@ function validateUsageError(message: string): WorkPacketCliResult {
     exitCode: WORK_PACKET_CLI_EXIT_CODES.USAGE_ERROR,
     stdout: "",
     stderr: `${message}\n\n${VALIDATE_HELP}`,
+  };
+}
+
+function validateRepoUsageError(message: string): WorkPacketCliResult {
+  return {
+    exitCode: WORK_PACKET_CLI_EXIT_CODES.USAGE_ERROR,
+    stdout: "",
+    stderr: `${message}\n\n${VALIDATE_REPO_HELP}`,
   };
 }
 
@@ -134,15 +183,12 @@ function unsupportedFormatError(value: string): string {
   return `Unsupported output format: ${value}. Expected "text" or "json".`;
 }
 
-export function parseValidateArgs(args: string[]): ValidateArgsParseResult {
-  if (args.some((arg) => isHelpArg(arg))) {
-    return {
-      format: "text",
-      helpRequested: true,
-    };
-  }
-
-  const paths: string[] = [];
+function parseFormatOption(args: string[]): {
+  format: WorkPacketCliOutputFormat;
+  rest: string[];
+  error?: string;
+} {
+  const rest: string[] = [];
   let format: WorkPacketCliOutputFormat = "text";
 
   for (let index = 0; index < args.length; index += 1) {
@@ -154,7 +200,7 @@ export function parseValidateArgs(args: string[]): ValidateArgsParseResult {
       if (value === undefined || value.trim().length === 0) {
         return {
           format,
-          helpRequested: false,
+          rest,
           error: "Missing required value for --format.",
         };
       }
@@ -162,7 +208,7 @@ export function parseValidateArgs(args: string[]): ValidateArgsParseResult {
       if (!isWorkPacketCliOutputFormat(value)) {
         return {
           format,
-          helpRequested: false,
+          rest,
           error: unsupportedFormatError(value),
         };
       }
@@ -178,7 +224,7 @@ export function parseValidateArgs(args: string[]): ValidateArgsParseResult {
       if (!isWorkPacketCliOutputFormat(value)) {
         return {
           format,
-          helpRequested: false,
+          rest,
           error: unsupportedFormatError(value),
         };
       }
@@ -190,34 +236,175 @@ export function parseValidateArgs(args: string[]): ValidateArgsParseResult {
     if (arg.startsWith("-")) {
       return {
         format,
-        helpRequested: false,
+        rest,
         error: `Unknown option: ${arg}`,
       };
     }
 
-    paths.push(arg);
+    rest.push(arg);
   }
 
-  if (paths.length === 0) {
+  return {
+    format,
+    rest,
+  };
+}
+
+export function parseValidateArgs(args: string[]): ValidateArgsParseResult {
+  if (args.some((arg) => isHelpArg(arg))) {
     return {
-      format,
+      format: "text",
+      helpRequested: true,
+    };
+  }
+
+  const parsed = parseFormatOption(args);
+
+  if (parsed.error !== undefined) {
+    return {
+      format: parsed.format,
+      helpRequested: false,
+      error: parsed.error,
+    };
+  }
+
+  if (parsed.rest.length === 0) {
+    return {
+      format: parsed.format,
       helpRequested: false,
       error: "Missing required path argument.",
     };
   }
 
-  if (paths.length > 1) {
+  if (parsed.rest.length > 1) {
     return {
-      format,
+      format: parsed.format,
       helpRequested: false,
       error: "The validate command accepts exactly one path.",
     };
   }
 
   return {
-    format,
+    format: parsed.format,
     helpRequested: false,
-    path: paths[0],
+    path: parsed.rest[0],
+  };
+}
+
+export function parseValidateRepoArgs(
+  args: string[],
+): ValidateRepoArgsParseResult {
+  if (args.some((arg) => isHelpArg(arg))) {
+    return {
+      format: "text",
+      helpRequested: true,
+    };
+  }
+
+  const parsed = parseFormatOption(args);
+
+  if (parsed.error !== undefined) {
+    return {
+      format: parsed.format,
+      helpRequested: false,
+      error: parsed.error,
+    };
+  }
+
+  if (parsed.rest.length > 0) {
+    return {
+      format: parsed.format,
+      helpRequested: false,
+      error: "The validate-repo command does not accept path arguments.",
+    };
+  }
+
+  return {
+    format: parsed.format,
+    helpRequested: false,
+  };
+}
+
+async function runValidateCommand(
+  args: string[],
+  options: WorkPacketCliOptions,
+): Promise<WorkPacketCliResult> {
+  const parsedValidateArgs = parseValidateArgs(args);
+
+  if (parsedValidateArgs.helpRequested) {
+    return success(VALIDATE_HELP);
+  }
+
+  if (parsedValidateArgs.error !== undefined) {
+    return validateUsageError(parsedValidateArgs.error);
+  }
+
+  if (parsedValidateArgs.path === undefined) {
+    return validateUsageError("Missing required path argument.");
+  }
+
+  const safePath = await resolveSafeWorkPacketPath(parsedValidateArgs.path, {
+    cwd: options.cwd,
+  });
+
+  if (!safePath.ok || safePath.resolvedPath === undefined) {
+    return validateUsageError(safePath.error ?? "Unsafe path rejected.");
+  }
+
+  const validation = await validateWorkPacketFile(safePath.resolvedPath);
+  const stdout = formatWorkPacketValidationResult(
+    {
+      ...validation,
+      path: safePath.displayPath,
+    },
+    {
+      format: parsedValidateArgs.format,
+    },
+  );
+
+  return {
+    exitCode: validation.valid
+      ? WORK_PACKET_CLI_EXIT_CODES.SUCCESS
+      : WORK_PACKET_CLI_EXIT_CODES.VALIDATION_FAILED,
+    stdout,
+    stderr: "",
+  };
+}
+
+async function runValidateRepoCommand(
+  args: string[],
+  options: WorkPacketCliOptions,
+): Promise<WorkPacketCliResult> {
+  const parsedValidateRepoArgs = parseValidateRepoArgs(args);
+
+  if (parsedValidateRepoArgs.helpRequested) {
+    return success(VALIDATE_REPO_HELP);
+  }
+
+  if (parsedValidateRepoArgs.error !== undefined) {
+    return validateRepoUsageError(parsedValidateRepoArgs.error);
+  }
+
+  const validation = await validateRepositoryWorkPackets({
+    cwd: options.cwd,
+  });
+
+  if (!validation.discoveryRootFound) {
+    return validateRepoUsageError(
+      "Missing work-packet discovery root: docs/work-packets/.",
+    );
+  }
+
+  const stdout = formatWorkPacketRepositoryValidationResult(validation, {
+    format: parsedValidateRepoArgs.format,
+  });
+
+  return {
+    exitCode: validation.valid
+      ? WORK_PACKET_CLI_EXIT_CODES.SUCCESS
+      : WORK_PACKET_CLI_EXIT_CODES.VALIDATION_FAILED,
+    stdout,
+    stderr: "",
   };
 }
 
@@ -232,50 +419,15 @@ export async function runWorkPacketCli(
       return success(ROOT_HELP);
     }
 
-    if (command !== "validate") {
-      return usageError(`Unknown command: ${command}`);
+    if (command === "validate") {
+      return await runValidateCommand(rest, options);
     }
 
-    const parsedValidateArgs = parseValidateArgs(rest);
-
-    if (parsedValidateArgs.helpRequested) {
-      return success(VALIDATE_HELP);
+    if (command === "validate-repo") {
+      return await runValidateRepoCommand(rest, options);
     }
 
-    if (parsedValidateArgs.error !== undefined) {
-      return validateUsageError(parsedValidateArgs.error);
-    }
-
-    if (parsedValidateArgs.path === undefined) {
-      return validateUsageError("Missing required path argument.");
-    }
-
-    const safePath = await resolveSafeWorkPacketPath(parsedValidateArgs.path, {
-      cwd: options.cwd,
-    });
-
-    if (!safePath.ok || safePath.resolvedPath === undefined) {
-      return validateUsageError(safePath.error ?? "Unsafe path rejected.");
-    }
-
-    const validation = await validateWorkPacketFile(safePath.resolvedPath);
-    const stdout = formatWorkPacketValidationResult(
-      {
-        ...validation,
-        path: safePath.displayPath,
-      },
-      {
-        format: parsedValidateArgs.format,
-      },
-    );
-
-    return {
-      exitCode: validation.valid
-        ? WORK_PACKET_CLI_EXIT_CODES.SUCCESS
-        : WORK_PACKET_CLI_EXIT_CODES.VALIDATION_FAILED,
-      stdout,
-      stderr: "",
-    };
+    return usageError(`Unknown command: ${command}`);
   } catch (error) {
     return unexpectedError(error);
   }

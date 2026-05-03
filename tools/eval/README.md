@@ -64,6 +64,7 @@ tools/eval/cases/EVAL-0006-work-packet-core-package.json
 tools/eval/cases/EVAL-0007-runtime-implementation-status.json
 tools/eval/cases/EVAL-0008-work-packet-core-validation-behavior.json
 tools/eval/cases/EVAL-0009-work-packet-frontmatter-parser.json
+tools/eval/cases/EVAL-0010-work-packet-document-validation.json
 ```
 
 ## Supported Check Types
@@ -164,3 +165,15 @@ EVAL-0009 Work packet frontmatter parser exists.
 ```
 
 This case verifies parser source, parser tests, public exports, parser error codes, key field mapping, and the local Bun test command.
+
+## Runtime Document Validation Cases
+
+The harness includes runtime document validation coverage for the work-packet core package.
+
+Current document validation case:
+
+```text
+EVAL-0010 Work packet document validation exists.
+```
+
+This case verifies document validator source, tests, public exports, validation composition, parser integration, metadata validation integration, Markdown validation integration, error behavior, warning preservation, and the local Bun test command.

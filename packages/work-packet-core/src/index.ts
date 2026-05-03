@@ -25,3 +25,7 @@ export {
   hasWorkPacketFrontmatter,
   parseWorkPacketFrontmatter,
 } from "./work-packet-frontmatter";
+
+export type { WorkPacketDocumentValidationResult } from "./work-packet-document";
+
+export { validateWorkPacketDocument } from "./work-packet-document";

@@ -478,6 +478,42 @@ check_contains "docs/work-packets/WP-0036-work-packet-core-hardening.md" 'Work P
 check_contains "docs/work-packets/WP-0037-work-packet-frontmatter-parser-runtime-slice-plan.md" 'Work Packet Frontmatter Parser Runtime Slice Plan' "WP-0037 records parser planning"
 check_contains "docs/work-packets/WP-0038-work-packet-frontmatter-parser-runtime-baseline.md" 'Work Packet Frontmatter Parser Runtime Baseline' "WP-0038 records parser implementation"
 
+
+check_file "docs/planning/15-work-packet-file-validation-runtime-slice-plan.md"
+check_file "docs/work-packets/WP-0039-work-packet-file-validation-runtime-slice-plan.md"
+check_file "docs/work-packets/WP-0040-work-packet-file-validation-runtime-baseline.md"
+
+check_file "packages/work-packet-core/src/work-packet-document.ts"
+check_file "packages/work-packet-core/src/work-packet-document.test.ts"
+
+check_file "tools/eval/cases/EVAL-0010-work-packet-document-validation.json"
+
+check_contains "packages/work-packet-core/src/index.ts" 'validateWorkPacketDocument' "document validator is exported"
+check_contains "packages/work-packet-core/src/work-packet-document.ts" 'WorkPacketDocumentValidationResult' "document validation result type exists"
+check_contains "packages/work-packet-core/src/work-packet-document.ts" 'validateWorkPacketDocument' "document validator exists"
+check_contains "packages/work-packet-core/src/work-packet-document.ts" 'parseWorkPacketFrontmatter' "document validator composes frontmatter parser"
+check_contains "packages/work-packet-core/src/work-packet-document.ts" 'validateWorkPacketMetadata' "document validator composes metadata validator"
+check_contains "packages/work-packet-core/src/work-packet-document.ts" 'validateWorkPacketMarkdown' "document validator composes Markdown validator"
+check_contains "packages/work-packet-core/src/work-packet-document.test.ts" 'missing frontmatter fails' "document validator tests missing frontmatter"
+check_contains "packages/work-packet-core/src/work-packet-document.test.ts" 'unclosed frontmatter fails' "document validator tests unclosed frontmatter"
+check_contains "packages/work-packet-core/src/work-packet-document.test.ts" 'missing Markdown section fails' "document validator tests missing Markdown section"
+check_contains "packages/work-packet-core/src/work-packet-document.test.ts" 'unknown frontmatter key warning is preserved' "document validator preserves parser warnings"
+check_contains "tools/eval/cases/EVAL-0010-work-packet-document-validation.json" 'validateWorkPacketDocument' "EVAL-0010 checks document validator export"
+check_contains "tools/eval/cases/EVAL-0010-work-packet-document-validation.json" 'bun test packages/work-packet-core' "EVAL-0010 checks package tests"
+
+
+
+
+
+
+
+
+
+check_contains "docs/planning/15-work-packet-file-validation-runtime-slice-plan.md" '^# Work Packet File Validation Runtime Slice Plan$' "document validation planning has expected heading"
+check_contains "docs/work-packets/WP-0039-work-packet-file-validation-runtime-slice-plan.md" 'Work Packet File Validation Runtime Slice Plan' "WP-0039 records document validation planning"
+check_contains "docs/work-packets/WP-0040-work-packet-file-validation-runtime-baseline.md" 'Work Packet File Validation Runtime Baseline' "WP-0040 records document validation implementation"
+
+
 print_header "Whitespace safety"
 
 check_git_diff_whitespace

@@ -19,6 +19,7 @@ WORK_PACKET_ID_PATTERN
 isWorkPacketStatus
 validateWorkPacketMetadata
 validateWorkPacketMarkdown
+validateWorkPacketDocument
 ```
 
 Current Validation Scope
@@ -59,3 +60,35 @@ bun test packages/work-packet-core
 Boundary
 
 This package must remain dependency-free until a future work packet justifies dependencies.
+
+## Work Packet Document Validation
+
+The package includes a full work-packet Markdown document validator.
+
+Current document validation API:
+
+```text
+validateWorkPacketDocument
+```
+
+The validator composes:
+
+```text
+parseWorkPacketFrontmatter
+validateWorkPacketMetadata
+validateWorkPacketMarkdown
+```
+
+The validator returns:
+
+```text
+valid
+metadata
+body
+errors
+warnings
+```
+
+The validator does not read files from disk. It validates caller-provided Markdown strings only.
+
+The validator does not add dependencies, access the network, evaluate parsed values, or write files.

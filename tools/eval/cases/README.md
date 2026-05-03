@@ -68,3 +68,7 @@ When runtime behavior is hardened, add or update evaluation cases so the harness
 EVAL-0009 Work packet frontmatter parser exists.
 
 When parser behavior is added, evaluation cases must verify source files, public exports, error codes, and local tests.
+
+EVAL-0010 Work packet document validation exists.
+
+When document-level validation behavior is added, evaluation cases must verify source files, public exports, composed validation behavior, expected errors, warning preservation, and local tests.

@@ -1,0 +1,22 @@
+{
+  "id": "EVAL-0010",
+  "title": "Work packet document validation exists",
+  "category": "runtime-package-document-validation",
+  "status": "active",
+  "required": true,
+  "purpose": "Verify that the work-packet core package includes full work-packet Markdown document validation.",
+  "checks": [
+    { "type": "file_exists", "path": "packages/work-packet-core/src/work-packet-document.ts" },
+    { "type": "file_exists", "path": "packages/work-packet-core/src/work-packet-document.test.ts" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/index.ts", "pattern": "validateWorkPacketDocument" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/work-packet-document.ts", "pattern": "WorkPacketDocumentValidationResult" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/work-packet-document.ts", "pattern": "parseWorkPacketFrontmatter" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/work-packet-document.ts", "pattern": "validateWorkPacketMetadata" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/work-packet-document.ts", "pattern": "validateWorkPacketMarkdown" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/work-packet-document.test.ts", "pattern": "missing frontmatter fails" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/work-packet-document.test.ts", "pattern": "unclosed frontmatter fails" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/work-packet-document.test.ts", "pattern": "missing Markdown section fails" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/work-packet-document.test.ts", "pattern": "unknown frontmatter key warning is preserved" },
+    { "type": "command_succeeds", "command": "bun test packages/work-packet-core" }
+  ]
+}

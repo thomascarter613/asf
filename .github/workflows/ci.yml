@@ -30,6 +30,9 @@ jobs:
       - name: Test work packet core
         run: bun test packages/work-packet-core
 
+      - name: Test work packet CLI
+        run: bun test packages/work-packet-cli
+
       - name: Run executable evaluation harness
         run: bash tools/eval/run-evaluations.sh
 

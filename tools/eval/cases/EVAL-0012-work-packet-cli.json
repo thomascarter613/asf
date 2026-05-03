@@ -1,0 +1,30 @@
+{
+  "id": "EVAL-0012",
+  "title": "Work packet CLI exists",
+  "category": "runtime-package-cli",
+  "status": "active",
+  "required": true,
+  "purpose": "Verify that the work-packet CLI package exists and validates one caller-provided work-packet file.",
+  "checks": [
+    { "type": "file_exists", "path": "packages/work-packet-cli/package.json" },
+    { "type": "file_exists", "path": "packages/work-packet-cli/README.md" },
+    { "type": "file_exists", "path": "packages/work-packet-cli/tsconfig.json" },
+    { "type": "file_exists", "path": "packages/work-packet-cli/src/index.ts" },
+    { "type": "file_exists", "path": "packages/work-packet-cli/src/cli.ts" },
+    { "type": "file_exists", "path": "packages/work-packet-cli/src/exit-codes.ts" },
+    { "type": "file_exists", "path": "packages/work-packet-cli/src/format.ts" },
+    { "type": "file_exists", "path": "packages/work-packet-cli/src/cli.test.ts" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/src/cli.ts", "pattern": "runWorkPacketCli" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/src/cli.ts", "pattern": "parseWorkPacketCliArgs" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/src/format.ts", "pattern": "formatWorkPacketValidationResult" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/src/exit-codes.ts", "pattern": "WORK_PACKET_CLI_EXIT_CODES" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/src/cli.ts", "pattern": "validateWorkPacketFile" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/src/format.ts", "pattern": "PASS" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/src/format.ts", "pattern": "FAIL" },
+    { "type": "file_contains", "path": "packages/work-packet-cli/src/cli.test.ts", "pattern": "file-read-error" },
+    { "type": "file_contains", "path": "package.json", "pattern": "\"work-packet\"" },
+    { "type": "file_contains", "path": "package.json", "pattern": "\"test:work-packet-cli\"" },
+    { "type": "file_contains", "path": ".github/workflows/ci.yml", "pattern": "bun test packages/work-packet-cli" },
+    { "type": "command_succeeds", "command": "bun test packages/work-packet-cli" }
+  ]
+}

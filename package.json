@@ -12,6 +12,8 @@
     "verify": "bun run verify:repo",
     "verify:repo": "bash tools/check-repo-contract.sh",
     "test": "bun test",
-    "test:work-packet-core": "bun test packages/work-packet-core"
+    "test:work-packet-core": "bun test packages/work-packet-core",
+    "test:work-packet-cli": "bun test packages/work-packet-cli",
+    "work-packet": "bun run packages/work-packet-cli/src/index.ts"
   }
 }

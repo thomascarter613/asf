@@ -143,24 +143,53 @@ custom_key: "ignored"
     expect(result.warnings.some((warning) => warning.code === "unknown-frontmatter-key")).toBe(true);
   });
 
-  test("warns on unsupported array values", () => {
+  test("warns on unsupported inline array values", () => {
     const result = parseWorkPacketFrontmatter(`---
-title: "Parser"
-status: "ready"
-version: "0.1.0"
-owner: "Project Steward"
-work_packet_id: "WP-0038"
-recommended_commit: "feat(work-packet): add frontmatter parser"
-related_documents:
-  - "README.md"
----
+  title: ["Parser"]
+  status: "ready"
+  version: "0.1.0"
+  owner: "Project Steward"
+  work_packet_id: "WP-0038"
+  recommended_commit: "feat(work-packet): add frontmatter parser"
+  ---
 
-# Body
-`);
+  # Body
+  `);
 
-    expect(result.errors).toHaveLength(0);
     expect(result.warnings.some((warning) => warning.code === "unsupported-frontmatter-value")).toBe(true);
   });
+
+  test("ignores known ASF metadata fields without warnings", () => {
+    const result = parseWorkPacketFrontmatter(`---
+  title: "Parser"
+  description: "Known but ignored."
+  status: "ready"
+  version: "0.1.0"
+  owner: "Project Steward"
+  document_type: "work-packet"
+  work_packet_id: "WP-0038"
+  canonical: false
+  audience:
+    - "project-steward"
+    - "engineering"
+  related_documents:
+    - "README.md"
+  affected_files:
+    - "packages/work-packet-core/src/work-packet-frontmatter.ts"
+  recommended_commit: "feat(work-packet): add frontmatter parser"
+  ---
+
+  # Body
+  `);
+
+    expect(result.errors).toHaveLength(0);
+    expect(result.warnings).toHaveLength(0);
+    expect(result.metadata.id).toBe("WP-0038");
+    expect(result.metadata.recommendedCommit).toBe(
+      "feat(work-packet): add frontmatter parser",
+    );
+  });
+
 
   test("parsed metadata can pass metadata validation", () => {
     const parsed = parseWorkPacketFrontmatter(validMarkdown);

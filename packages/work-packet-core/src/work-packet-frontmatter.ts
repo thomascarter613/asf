@@ -26,6 +26,16 @@ const SUPPORTED_FRONTMATTER_KEYS = new Set([
   "recommended_commit",
 ]);
 
+const KNOWN_IGNORED_FRONTMATTER_KEYS = new Set([
+  "description",
+  "audience",
+  "canonical",
+  "backlog_refs",
+  "adr_refs",
+  "related_documents",
+  "affected_files",
+]);
+
 function createIssue(
   code: string,
   message: string,
@@ -77,6 +87,7 @@ function setMetadataValue(
     case "id":
       metadata.id = value;
       break;
+
     case "work_packet_id":
       metadata.workPacketId = value;
 
@@ -85,30 +96,39 @@ function setMetadataValue(
       }
 
       break;
+
     case "title":
       metadata.title = value;
       break;
+
     case "status":
       metadata.status = value as WorkPacketMetadata["status"];
       break;
+
     case "version":
       metadata.version = value;
       break;
+
     case "created":
       metadata.created = value;
       break;
+
     case "updated":
       metadata.updated = value;
       break;
+
     case "owner":
       metadata.owner = value;
       break;
+
     case "document_type":
       metadata.documentType = value;
       break;
+
     case "milestone":
       metadata.milestone = value;
       break;
+
     case "recommended_commit":
       metadata.recommendedCommit = value;
       break;
@@ -168,7 +188,12 @@ export function parseWorkPacketFrontmatter(
   }
 
   const frontmatterLines = lines.slice(1, closingDelimiterIndex);
-  const body = lines.slice(closingDelimiterIndex + 1).join("\n").replace(/^\n/, "");
+  const body = lines
+    .slice(closingDelimiterIndex + 1)
+    .join("\n")
+    .replace(/^\n/, "");
+
+  let ignoredBlockKey: string | undefined;
 
   frontmatterLines.forEach((line, index) => {
     const trimmed = line.trim();
@@ -178,6 +203,10 @@ export function parseWorkPacketFrontmatter(
     }
 
     if (trimmed.startsWith("- ")) {
+      if (ignoredBlockKey !== undefined) {
+        return;
+      }
+
       warnings.push(
         createIssue(
           "unsupported-frontmatter-value",
@@ -189,6 +218,8 @@ export function parseWorkPacketFrontmatter(
 
       return;
     }
+
+    ignoredBlockKey = undefined;
 
     const separatorIndex = trimmed.indexOf(":");
 
@@ -208,7 +239,19 @@ export function parseWorkPacketFrontmatter(
     const key = trimmed.slice(0, separatorIndex).trim();
     const rawValue = trimmed.slice(separatorIndex + 1).trim();
 
+    if (KNOWN_IGNORED_FRONTMATTER_KEYS.has(key)) {
+      if (rawValue.length === 0 || isUnsupportedComplexValue(rawValue)) {
+        ignoredBlockKey = key;
+      }
+
+      return;
+    }
+
     if (!SUPPORTED_FRONTMATTER_KEYS.has(key)) {
+      if (rawValue.length === 0) {
+        ignoredBlockKey = key;
+      }
+
       warnings.push(
         createIssue(
           "unknown-frontmatter-key",

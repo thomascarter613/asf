@@ -77,3 +77,7 @@ When document-level validation behavior is added, evaluation cases must verify s
 EVAL-0011 Work packet file loading exists.
 
 When file-loading behavior is added, evaluation cases must verify source files, public exports, read-error behavior, composed validation behavior, and local tests.
+
+EVAL-0012 Work packet CLI exists.
+
+When CLI behavior is added, evaluation cases must verify command files, public exports, exit codes, output anchors, root scripts, CI tests, and local tests.

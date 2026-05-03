@@ -1,0 +1,16 @@
+{
+  "name": "@asf/work-packet-cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Developer-facing CLI for validating Agentic Software Framework work-packet files.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@asf/work-packet-core": "workspace:*"
+  },
+  "scripts": {
+    "test": "bun test src"
+  }
+}

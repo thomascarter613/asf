@@ -65,6 +65,7 @@ tools/eval/cases/EVAL-0007-runtime-implementation-status.json
 tools/eval/cases/EVAL-0008-work-packet-core-validation-behavior.json
 tools/eval/cases/EVAL-0009-work-packet-frontmatter-parser.json
 tools/eval/cases/EVAL-0010-work-packet-document-validation.json
+tools/eval/cases/EVAL-0012-work-packet-cli.json
 ```
 
 ## Supported Check Types
@@ -190,3 +191,15 @@ EVAL-0011 Work packet file loading exists.
 ```
 
 This case verifies file-loading source, tests, public exports, file-read error behavior, document validator composition, valid file behavior, missing file behavior, and the local Bun test command.
+
+## Runtime CLI Cases
+
+The harness includes runtime CLI coverage for the work-packet CLI package.
+
+Current CLI case:
+
+```text
+EVAL-0012 Work packet CLI exists.
+```
+
+This case verifies CLI package files, public command runner, argument parsing, formatter behavior, explicit exit codes, root scripts, CI test coverage, and local CLI tests.

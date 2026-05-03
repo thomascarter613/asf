@@ -1,0 +1,394 @@
+# Resolved SRS Open Questions
+
+These are my recommended answers to the SRS open questions. They should be treated as **proposed product/architecture decisions** until captured in the upcoming ADRs. The product idea already frames the MVP around proving the loop from project creation → charter/SRS → ADRs → backlog/milestones → work packet → verification → commit/handoff, so the answers below preserve that MVP boundary. 
+
+---
+
+## 1. Is the first deliverable a SaaS web app, CLI, repo template, or hybrid?
+
+**Answer:** The first deliverable should be a **SaaS-first web control plane with repository-ready Markdown export**.
+
+It should not begin as CLI-only or repo-template-only, because the core product value depends on guided workflow, project state, artifact review, next-step guidance, and eventually billing/team workflows.
+
+**Decision:** SaaS-first, export-centered, CLI-later.
+
+**Implication:** This becomes **ADR-0001: Product Delivery Surface**.
+
+---
+
+## 2. Should GitHub integration be included in the first MVP or should export come first?
+
+**Answer:** **Export should come first. GitHub integration should follow as a cautious MVP-adjacent feature.**
+
+The first trusted workflow should be:
+
+```text
+Generate artifacts → export Markdown bundle → user commits manually
+```
+
+GitHub integration should begin as read-only or proposal-based. Repository writes and PR automation should come later.
+
+**Decision:** Export-first; GitHub read/proposal second; write/PR later.
+
+**Implication:** This becomes part of **ADR-0006: GitHub Integration Strategy**.
+
+---
+
+## 3. What is the minimum useful artifact set for first-run onboarding?
+
+**Answer:** The minimum useful first-run artifact set should be:
+
+```text
+00 Product Inception Brief
+01 Product Charter
+02 Stakeholder and User Model
+03 SRS
+04 Architecture Overview
+05 ADR Index + ADR-0001
+06 Domain Model
+07 Epics
+08 Backlog
+09 Milestone Plan
+10 First Work Packet
+11 Current State / Handoff Packet
+```
+
+For the actual user interface, this should be progressively disclosed. The user should not feel like they are being buried under documents.
+
+**Decision:** The system internally follows the full SDLC chain, but the user experience should present one next step at a time.
+
+---
+
+## 4. What AI provider or providers should be supported first?
+
+**Answer:** Start with an **AI provider abstraction**, not a hard dependency on one provider.
+
+For MVP, support one provider operationally, but design the architecture so additional providers can be added without rewriting the product model.
+
+**Decision:** Provider abstraction from day one; single initial provider implementation acceptable.
+
+**Implication:** This becomes **ADR-0005: AI Provider Abstraction**.
+
+---
+
+## 5. What artifact editor experience is required for MVP?
+
+**Answer:** MVP requires a basic structured artifact editor, not a full Notion-style editor.
+
+Minimum required editor capabilities:
+
+```text
+View generated artifact
+Edit Markdown content
+Edit metadata/status
+Save draft
+Mark proposed/accepted/canonical where allowed
+Export Markdown
+Show related artifacts
+```
+
+A rich block editor is not required for MVP.
+
+**Decision:** Markdown-first artifact editor with metadata/status controls.
+
+---
+
+## 6. How should requirements and traceability be represented internally?
+
+**Answer:** Requirements and traceability should be represented as **structured records**, not only as Markdown text.
+
+Markdown is the export format, but the app should internally model:
+
+```text
+Requirement
+Epic
+Backlog Item
+Milestone
+Work Packet
+Verification Record
+Traceability Link
+```
+
+**Decision:** Structured internal model + Markdown export.
+
+**Implication:** This belongs in the data model and likely **ADR-0010: Initial Persistence Strategy**.
+
+---
+
+## 7. How much of verification is automated in MVP?
+
+**Answer:** MVP verification should be **guided and recorded**, not fully executed by the SaaS.
+
+The product should tell the user:
+
+```text
+Run this command.
+Expect this result.
+Record pass/fail.
+Attach or summarize evidence.
+```
+
+Automated hosted execution, CI ingestion, and sandboxed repair suggestions should come later.
+
+**Decision:** Guided verification + evidence recording in MVP.
+
+**Implication:** This becomes **ADR-0009: Verification Model**.
+
+---
+
+## 8. How should user approval states be stored?
+
+**Answer:** Approval should be stored as a first-class domain concept.
+
+Minimum approval record:
+
+```text
+approval_id
+project_id
+target_type
+target_id
+actor_id
+status
+decision_summary
+created_at
+updated_at
+```
+
+Approval states should include:
+
+```text
+pending
+approved
+rejected
+revision_requested
+superseded
+```
+
+**Decision:** Approvals are structured records, not just text inside documents.
+
+---
+
+## 9. What is the first billing implementation scope?
+
+**Answer:** MVP should include **billing readiness**, not full billing unless the first deployment is intended to charge users immediately.
+
+Minimum billing readiness:
+
+```text
+plan_tier
+project_limit
+usage_limit
+ai_credit_balance or usage counter
+subscription_status placeholder
+```
+
+Do not integrate a payment processor until the product is ready for paid users.
+
+**Decision:** Model plan/usage early; defer payment processor until paid beta or launch.
+
+---
+
+## 10. What project templates should exist at launch?
+
+**Answer:** Launch should include a very small template set:
+
+```text
+SaaS Product
+AI Application
+Internal Tool
+Developer Tool
+Client Project
+Blank / Custom
+```
+
+Avoid too many templates early. The product should prove its core workflow before becoming a template marketplace.
+
+**Decision:** Five starter templates plus blank/custom.
+
+---
+
+## 11. How much repository content should be scanned?
+
+**Answer:** MVP should scan only safe, selected repository metadata and known project files.
+
+Initial scan targets:
+
+```text
+README.md
+package/config manifests
+docs/
+.github/workflows/
+existing ADRs
+existing requirements/planning docs
+test/build config files
+```
+
+The product should avoid scanning:
+
+```text
+.env
+secrets
+credentials
+large binaries
+private keys
+node_modules
+build artifacts
+coverage artifacts
+vendor folders
+```
+
+**Decision:** Selective safe scan; no broad ingestion by default.
+
+---
+
+## 12. What secret detection mechanism should be used first?
+
+**Answer:** Start with a layered but simple mechanism:
+
+```text
+File/path denylist
+Pattern-based secret detection
+Known sensitive extension detection
+Explicit warnings before AI context inclusion
+```
+
+Examples of sensitive files:
+
+```text
+.env
+.env.*
+*.pem
+*.key
+id_rsa
+credentials.json
+secrets.*
+```
+
+Later, integrate a stronger scanner such as a dedicated secret-detection tool.
+
+**Decision:** Basic secret redaction in MVP; stronger scanning soon after.
+
+**Implication:** This becomes **ADR-0007: Secrets Detection and Redaction Boundary**.
+
+---
+
+## 13. How should generated artifacts be versioned?
+
+**Answer:** Use simple semantic document versions in frontmatter for MVP.
+
+Minimum fields:
+
+```yaml
+version: "0.1.0"
+status: "draft"
+created: "YYYY-MM-DD"
+updated: "YYYY-MM-DD"
+canonical: false
+supersedes: ""
+superseded_by: ""
+```
+
+Rules:
+
+```text
+Patch version: small edits
+Minor version: meaningful content revision
+Major version: canonical restructuring or incompatible meaning change
+```
+
+**Decision:** Simple document versioning through metadata, backed by Git history after export.
+
+---
+
+## 14. What constitutes canonical acceptance of an artifact?
+
+**Answer:** An artifact becomes canonical only when a human explicitly approves it.
+
+Canonical acceptance requires:
+
+```text
+status: "canonical"
+canonical: true
+approval record exists
+supersession links handled if replacing prior artifact
+activity/audit event recorded
+```
+
+AI-generated artifacts should begin as `draft` or `proposed`, never automatically canonical.
+
+**Decision:** Human approval is required for canonical status.
+
+---
+
+## 15. What is the correct initial deployment model?
+
+**Answer:** The initial deployment model should be a **modular monolith SaaS application with a worker process and relational database**.
+
+Recommended shape:
+
+```text
+Web/App Server
+Worker
+PostgreSQL
+Object storage for exports/artifacts if needed
+Queue for long-running generation/export jobs
+External AI provider
+Optional GitHub API integration
+```
+
+Do not start with microservices. The domain is complex enough already; distributed architecture would add unnecessary operational burden.
+
+**Decision:** Modular monolith + worker + relational database.
+
+**Implication:** This becomes **ADR-0002: Modular Monolith Versus Service-Oriented Architecture** and **ADR-0010: Initial Persistence Strategy**.
+
+---
+
+# Consolidated Product Decisions
+
+The open questions resolve into these recommended positions:
+
+```text
+Delivery surface: SaaS-first web control plane
+Artifact portability: Markdown export required
+Repository strategy: export-first, GitHub cautious/read-first
+Implementation architecture: modular monolith
+Persistence: relational structured model + Markdown export
+AI integration: provider abstraction from day one
+Verification: guided/evidence-recorded in MVP
+Approvals: first-class structured records
+Billing: readiness first, payment later
+Templates: small starter set
+Repository scan: selective and safe
+Secrets: denylist + pattern detection first
+Versioning: frontmatter metadata + Git history
+Canonical status: human approval required
+```
+
+# What This Changes Before the Next Document
+
+Before creating the ADR index, these answers should inform the initial ADR list.
+
+The first ADR sequence should be:
+
+```text
+ADR-0001 Product Delivery Surface
+ADR-0002 Modular Monolith Architecture
+ADR-0003 Repository as Durable Source of Truth
+ADR-0004 Artifact Format and Metadata
+ADR-0005 AI Provider Abstraction
+ADR-0006 GitHub Integration Strategy
+ADR-0007 Secrets Detection and Redaction Boundary
+ADR-0008 Work Packet Execution Model
+ADR-0009 Verification Model
+ADR-0010 Initial Persistence Strategy
+ADR-0011 Authentication and Account Model
+ADR-0012 Billing Readiness
+```
+
+No file change is required unless you want to update the SRS open questions section now. If you do update it, the clean commit would be:
+
+```bash
+git add docs/product/03-software-requirements-specification.md
+git commit -m "docs(product): resolve initial SRS open questions"
+```

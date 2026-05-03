@@ -252,6 +252,8 @@ check_file "docs/planning/07-package-and-tooling-baseline.md"
 check_file "docs/planning/08-ci-baseline-planning.md"
 check_file "docs/planning/09-executable-evaluation-harness-planning.md"
 check_file "docs/planning/10-evaluation-harness-ci-integration-planning.md"
+check_file "docs/planning/13-work-packet-core-hardening.md"
+check_file "docs/work-packets/WP-0036-work-packet-core-hardening.md"
 
 print_header "Domain documents"
 
@@ -319,6 +321,7 @@ check_file "tools/eval/cases/EVAL-0002-adr-gap-preservation.json"
 check_file "tools/eval/cases/EVAL-0003-package-manager-boundary.json"
 check_file "tools/eval/cases/EVAL-0004-ci-baseline-presence.json"
 check_file "tools/eval/cases/EVAL-0005-runtime-not-started-boundary.json"
+check_file "tools/eval/cases/EVAL-0008-work-packet-core-validation-behavior.json"
 check_file "tools/eval/results/.gitkeep"
 
 print_header "Executable evaluation harness contract"
@@ -438,6 +441,18 @@ check_contains "docs/planning/10-evaluation-harness-ci-integration-planning.md" 
 check_contains "docs/work-packets/WP-0030-evaluation-harness-ci-integration-planning.md" 'Evaluation Harness CI Integration Planning' "WP-0030 records evaluation harness CI integration planning"
 check_contains "docs/work-packets/WP-0031-evaluation-harness-ci-integration.md" 'Evaluation Harness CI Integration' "WP-0031 records evaluation harness CI integration"
 
+
+check_contains "packages/work-packet-core/src/work-packet-validation.ts" 'WORK_PACKET_ID_PATTERN' "work packet ID pattern is exported"
+check_contains "packages/work-packet-core/src/work-packet-validation.ts" 'REQUIRED_WORK_PACKET_MARKDOWN_SECTIONS' "required Markdown sections are exported"
+check_contains "packages/work-packet-core/src/index.ts" 'WORK_PACKET_ID_PATTERN' "work packet ID pattern is re-exported"
+check_contains "packages/work-packet-core/src/index.ts" 'REQUIRED_WORK_PACKET_MARKDOWN_SECTIONS' "required Markdown sections are re-exported"
+check_contains "packages/work-packet-core/src/work-packet-validation.test.ts" 'whitespace-only id fails' "metadata validation tests whitespace-only ID"
+check_contains "packages/work-packet-core/src/work-packet-validation.test.ts" 'lowercase id format fails' "metadata validation tests lowercase ID"
+check_contains "packages/work-packet-core/src/work-packet-validation.test.ts" 'whitespace-only Markdown fails' "Markdown validation tests whitespace-only input"
+check_contains "tools/eval/cases/EVAL-0008-work-packet-core-validation-behavior.json" 'WORK_PACKET_ID_PATTERN' "EVAL-0008 checks work packet ID pattern"
+check_contains "tools/eval/cases/EVAL-0008-work-packet-core-validation-behavior.json" 'bun test packages/work-packet-core' "EVAL-0008 checks work packet core tests"
+check_contains "docs/planning/13-work-packet-core-hardening.md" '^# Work Packet Core Hardening$' "work packet core hardening plan has expected heading"
+check_contains "docs/work-packets/WP-0036-work-packet-core-hardening.md" 'Work Packet Core Hardening' "WP-0036 records work packet core hardening"
 print_header "Whitespace safety"
 
 check_git_diff_whitespace

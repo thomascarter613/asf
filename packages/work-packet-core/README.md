@@ -1,0 +1,61 @@
+# Work Packet Core
+
+`@asf/work-packet-core` is the first runtime package for the Agentic Software Framework.
+
+It provides typed work-packet domain models and validation utilities.
+
+## Runtime Status
+
+Runtime implementation has started with this bounded package.
+
+This package is intentionally small. It does not implement a workflow engine, agent runtime, database, API service, web UI, vector retrieval system, or deployment path.
+
+## Current Public API
+
+```text
+WORK_PACKET_STATUSES
+REQUIRED_WORK_PACKET_MARKDOWN_SECTIONS
+WORK_PACKET_ID_PATTERN
+isWorkPacketStatus
+validateWorkPacketMetadata
+validateWorkPacketMarkdown
+```
+
+Current Validation Scope
+
+The package currently validates:
+
+work-packet ID presence;
+work-packet ID format;
+title presence;
+status presence;
+allowed status;
+version presence;
+owner presence;
+recommended commit presence;
+required Markdown sections.
+
+## Hardening Coverage
+
+The package now explicitly tests:
+
+1. whitespace-only IDs;
+2. lowercase work-packet IDs;
+3. invalid ID formats;
+4. whitespace-only recommended commit values;
+5. whitespace-only Markdown;
+6. numbered required Markdown headings;
+7. unnumbered required Markdown headings;
+8. required Markdown section constants;
+9. the exported work-packet ID pattern.
+
+Test Command
+
+Run from the repository root:
+```bash
+bun test packages/work-packet-core
+```
+
+Boundary
+
+This package must remain dependency-free until a future work packet justifies dependencies.

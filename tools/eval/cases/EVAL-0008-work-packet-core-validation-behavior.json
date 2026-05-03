@@ -1,0 +1,20 @@
+{
+  "id": "EVAL-0008",
+  "title": "Work packet core validation behavior is covered",
+  "category": "runtime-package-hardening",
+  "status": "active",
+  "required": true,
+  "purpose": "Verify that the work-packet core package has hardened validation behavior and regression tests.",
+  "checks": [
+    { "type": "file_exists", "path": "packages/work-packet-core/src/work-packet-validation.ts" },
+    { "type": "file_exists", "path": "packages/work-packet-core/src/work-packet-validation.test.ts" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/work-packet-validation.ts", "pattern": "WORK_PACKET_ID_PATTERN" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/work-packet-validation.ts", "pattern": "REQUIRED_WORK_PACKET_MARKDOWN_SECTIONS" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/index.ts", "pattern": "WORK_PACKET_ID_PATTERN" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/index.ts", "pattern": "REQUIRED_WORK_PACKET_MARKDOWN_SECTIONS" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/work-packet-validation.test.ts", "pattern": "whitespace-only id fails" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/work-packet-validation.test.ts", "pattern": "lowercase id format fails" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/work-packet-validation.test.ts", "pattern": "whitespace-only Markdown fails" },
+    { "type": "command_succeeds", "command": "bun test packages/work-packet-core" }
+  ]
+}

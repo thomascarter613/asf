@@ -60,3 +60,7 @@ A required active case failure causes the runner to exit non-zero.
 Cases must only inspect explicitly listed repository-relative files.
 
 Do not add cases that inspect secrets, credentials, tokens, private keys, environment files, dependency directories, generated caches, or files outside the repository.
+
+EVAL-0008 Work packet core validation behavior is covered.
+
+When runtime behavior is hardened, add or update evaluation cases so the harness guards the hardened behavior.

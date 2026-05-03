@@ -17,13 +17,13 @@ baseline
 Runtime implementation status:
 
 ```text
-Runtime implementation has not started.
+Runtime implementation has started with the bounded work-packet core package.
 ```
 
 CI integration status:
 
 ```text
-The executable evaluation harness is not yet part of CI.
+The executable evaluation harness runs locally and in CI.
 ```
 
 ## Command
@@ -60,6 +60,9 @@ tools/eval/cases/EVAL-0002-adr-gap-preservation.json
 tools/eval/cases/EVAL-0003-package-manager-boundary.json
 tools/eval/cases/EVAL-0004-ci-baseline-presence.json
 tools/eval/cases/EVAL-0005-runtime-not-started-boundary.json
+tools/eval/cases/EVAL-0006-work-packet-core-package.json
+tools/eval/cases/EVAL-0007-runtime-implementation-status.json
+tools/eval/cases/EVAL-0008-work-packet-core-validation-behavior.json
 ```
 
 ## Supported Check Types
@@ -136,3 +139,15 @@ Over time, the evaluation harness may become the broader behavioral and regressi
 This harness is not added to CI in the baseline packet.
 
 A future packet should plan and implement CI integration after local execution is stable.
+
+## Runtime Hardening Cases
+
+The harness includes runtime hardening coverage for the work-packet core package.
+
+Current hardening case:
+
+```text
+EVAL-0008 Work packet core validation behavior is covered.
+```
+
+This case verifies validation constants, edge-case tests, and the local Bun test command.

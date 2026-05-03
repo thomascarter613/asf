@@ -745,3 +745,24 @@ This work packet is complete when:
 ```text
 This packet is the first controlled transition from documentation-only readiness into minimal package/tooling setup. It intentionally creates command wrappers only and does not begin runtime implementation.
 ```
+
+## Historical Correction Note
+
+This work packet is part of the package and tooling setup sequence that now uses Bun as the JavaScript/TypeScript package manager.
+
+The current package/tooling baseline includes:
+
+```text
+bun.lock
+```
+
+
+## Current Bun Verification Anchor
+
+The current canonical local verification command is:
+
+```bash
+bun run verify
+```
+
+This historical packet is preserved, but the active package/tooling baseline now uses Bun and `bun.lock`.

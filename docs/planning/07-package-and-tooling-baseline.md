@@ -43,8 +43,17 @@ related_documents:
 # Package and Tooling Baseline
 
 ## 1. Purpose
-
 This document defines the package and tooling baseline for the **Agentic Software Framework**.
+
+Bun is the canonical JavaScript/TypeScript package manager and script runner for the current repository baseline.
+
+Required package/tooling files:
+
+```text
+package.json
+bun.lock
+```
+
 
 The uploaded repository tree is the active baseline.
 
@@ -55,7 +64,7 @@ This document is planning-only.
 It does not create:
 
 1. `package.json`
-2. `pnpm-lock.yaml`
+2. `bun.lock`
 3. `bun.lock`
 4. `pyproject.toml`
 5. `uv.lock`
@@ -67,6 +76,19 @@ It does not create:
 11. `apps/`
 12. `services/`
 13. Runtime implementation code.
+
+---
+
+Forbidden package/tooling files:
+
+pnpm-workspace.yaml
+pnpm-lock.yaml
+
+The canonical local verification command is:
+
+bun run verify
+
+ADR-0023 supersedes ADR-0019 for active package-manager direction. ADR-0019 remains preserved as historical context.
 
 ---
 
@@ -136,7 +158,7 @@ The current ADR-0019 filename indicates the expected package-manager direction:
 ```text
 uv
 cargo
-pnpm
+bun
 ```
 
 Any change to this strategy should happen through an explicit ADR update or supersession packet.
@@ -155,7 +177,7 @@ Current intended direction:
 | --- | --- | --- |
 | Python | `uv` | Python modules, evaluation tooling, retrieval experiments, scripting, or ML-adjacent work. |
 | Rust | `cargo` | Rust crates, performance-sensitive tooling, runners, parsers, or future execution components. |
-| TypeScript / JavaScript | `pnpm` | TypeScript packages, CLI tooling, web interfaces, contract tooling, and monorepo package orchestration. |
+| TypeScript / JavaScript | `bun` | TypeScript packages, CLI tooling, web interfaces, contract tooling, and monorepo package orchestration. |
 
 ## 5.2 Strategy Rules
 
@@ -187,7 +209,7 @@ Potential outputs only after explicit approval:
 
 ```text
 package.json
-pnpm-lock.yaml
+bun.lock
 pyproject.toml
 uv.lock
 Cargo.toml
@@ -217,7 +239,7 @@ Expected lockfiles by ecosystem:
 | --- | --- |
 | Python / `uv` | `uv.lock` |
 | Rust / `cargo` | `Cargo.lock` |
-| TypeScript / `pnpm` | `pnpm-lock.yaml` |
+| TypeScript / `bun` | `bun.lock` |
 
 ## 6.3 What Is Not Created Yet
 
@@ -226,7 +248,7 @@ This baseline does not create:
 ```text
 uv.lock
 Cargo.lock
-pnpm-lock.yaml
+bun.lock
 ```
 
 Lockfiles should appear only after package-manager setup is explicitly authorized.
@@ -553,7 +575,6 @@ Do not create any of the following in this packet:
 
 ```text
 package.json
-pnpm-lock.yaml
 bun.lock
 pyproject.toml
 uv.lock

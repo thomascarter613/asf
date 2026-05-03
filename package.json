@@ -9,8 +9,9 @@
     "packages/*"
   ],
   "scripts": {
-    "verify": "bun run verify:repo",
+    "verify": "bun run verify:repo && bun run verify:work-packets",
     "verify:repo": "bash tools/check-repo-contract.sh",
+    "verify:work-packets": "bun run work-packet validate-repo",
     "test": "bun test",
     "test:work-packet-core": "bun test packages/work-packet-core",
     "test:work-packet-cli": "bun test packages/work-packet-cli",

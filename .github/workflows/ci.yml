@@ -33,6 +33,9 @@ jobs:
       - name: Test work packet CLI
         run: bun test packages/work-packet-cli
 
+      - name: Validate work packets
+        run: bun run verify:work-packets
+
       - name: Run executable evaluation harness
         run: bash tools/eval/run-evaluations.sh
 

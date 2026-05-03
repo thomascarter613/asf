@@ -137,8 +137,9 @@ check_file "package.json"
 
 print_header "Package script contract"
 
-check_contains "package.json" '"verify": "bun run verify:repo"' "package.json defines verify through bun"
+check_contains "package.json" '"verify": "bun run verify:repo && bun run verify:work-packets"' "package.json defines verify through repo contract and work-packet validation"
 check_contains "package.json" '"verify:repo": "bash tools/check-repo-contract.sh"' "package.json defines verify:repo through repo contract script"
+check_contains "package.json" '"verify:work-packets": "bun run work-packet validate-repo"' "package.json defines repo-wide work-packet verification"
 check_not_contains "package.json" 'pnpm' "package.json does not reference pnpm"
 
 print_header "CI baseline files"
@@ -155,6 +156,7 @@ check_contains ".github/workflows/ci.yml" 'bash tools/eval/run-evaluations.sh' "
 check_contains ".github/workflows/ci.yml" 'branches:' "CI workflow constrains push branches"
 check_contains ".github/workflows/ci.yml" 'bun install --frozen-lockfile' "CI workflow installs with frozen Bun lockfile"
 check_contains ".github/workflows/ci.yml" 'bun run verify' "CI workflow runs Bun verification"
+check_contains ".github/workflows/ci.yml" 'bun run verify:work-packets' "CI workflow validates repo-wide work packets"
 check_contains ".github/workflows/ci.yml" 'contents: read' "CI workflow uses read-only contents permission"
 check_contains ".github/workflows/ci.yml" 'git diff --check' "CI workflow checks whitespace"
 check_contains ".github/workflows/ci.yml" 'main' "CI workflow references main branch"

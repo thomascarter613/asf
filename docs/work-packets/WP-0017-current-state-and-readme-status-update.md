@@ -646,3 +646,13 @@ This work packet is complete when:
 ```text
 This packet is a status synchronization packet. It keeps the repository's main orientation documents aligned after important baseline stabilization progress. It does not begin runtime implementation.
 ```
+
+## Verification Commands
+
+Run the relevant repository verification commands for this historical packet:
+
+```bash
+bun run verify
+bash tools/eval/run-evaluations.sh
+bun run work-packet validate-repo
+```

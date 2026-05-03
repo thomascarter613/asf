@@ -645,3 +645,13 @@ This work packet is complete when:
 ```text
 This packet is intentionally review-only. The repository's ADR lineage is valuable decision history. Normalization begins with visibility and recommendations, not destructive cleanup.
 ```
+
+## Verification Commands
+
+Run the relevant repository verification commands for this historical packet:
+
+```bash
+bun run verify
+bash tools/eval/run-evaluations.sh
+bun run work-packet validate-repo
+```

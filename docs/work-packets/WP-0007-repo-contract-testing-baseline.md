@@ -611,3 +611,13 @@ This work packet is complete when:
 ```text
 This packet intentionally defines repo contract testing at the documentation level first. Executable contract checks should come next, after the contract categories and baseline exceptions are explicit.
 ```
+
+## Verification Commands
+
+Run the relevant repository verification commands for this historical packet:
+
+```bash
+bun run verify
+bash tools/eval/run-evaluations.sh
+bun run work-packet validate-repo
+```

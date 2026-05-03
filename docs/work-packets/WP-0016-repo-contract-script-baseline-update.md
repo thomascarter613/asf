@@ -607,3 +607,13 @@ This work packet is complete when:
 ```text
 This packet keeps the executable repo contract script aligned with the newly added evaluation harness baseline. It is intentionally narrow and does not begin CI, package tooling, runtime implementation, or executable evaluation harness work.
 ```
+
+## Verification Commands
+
+Run the relevant repository verification commands for this historical packet:
+
+```bash
+bun run verify
+bash tools/eval/run-evaluations.sh
+bun run work-packet validate-repo
+```

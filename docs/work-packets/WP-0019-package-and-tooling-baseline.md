@@ -723,3 +723,13 @@ This work packet is complete when:
 ```text
 This packet keeps the project disciplined at the boundary between implementation readiness and actual tooling setup. The package/tooling baseline must be accepted before package files, lockfiles, CI workflows, or runtime source code are introduced.
 ```
+
+## Verification Commands
+
+Run the relevant repository verification commands for this historical packet:
+
+```bash
+bun run verify
+bash tools/eval/run-evaluations.sh
+bun run work-packet validate-repo
+```

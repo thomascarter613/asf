@@ -538,3 +538,19 @@ Not completed yet.
 ```text
 Not completed yet.
 ```
+
+## Verification Commands
+
+Run the relevant repository verification commands for this historical packet:
+
+```bash
+bun run verify
+bash tools/eval/run-evaluations.sh
+bun run work-packet validate-repo
+```
+
+## Recommended Atomic Commit
+
+```text
+docs(planning): add architecture overview placement review
+```

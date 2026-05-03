@@ -218,3 +218,9 @@ The workflow must not include:
 5. SSH keys;
 6. private API keys;
 7. environment secrets.
+
+## Recommended Atomic Commit
+
+```text
+ci(repo): add baseline verification workflow
+```

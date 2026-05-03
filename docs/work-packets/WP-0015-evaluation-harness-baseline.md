@@ -715,3 +715,13 @@ This work packet is complete when:
 ```text
 This packet defines how the project will evaluate its own agentic software-development behavior before implementing the evaluation harness. It keeps the evaluation model grounded in repository artifacts, work packets, context continuity, repo contract checks, and future retrieval/agent execution scenarios.
 ```
+
+## Verification Commands
+
+Run the relevant repository verification commands for this historical packet:
+
+```bash
+bun run verify
+bash tools/eval/run-evaluations.sh
+bun run work-packet validate-repo
+```

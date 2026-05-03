@@ -634,3 +634,13 @@ This work packet is complete when:
 ```text
 This packet adds the root README after the repository has enough baseline documentation to describe itself accurately. It intentionally preserves all known baseline caveats rather than presenting the repository as cleaner or more implemented than it is.
 ```
+
+## Verification Commands
+
+Run the relevant repository verification commands for this historical packet:
+
+```bash
+bun run verify
+bash tools/eval/run-evaluations.sh
+bun run work-packet validate-repo
+```

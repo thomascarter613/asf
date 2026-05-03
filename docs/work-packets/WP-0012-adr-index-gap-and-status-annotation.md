@@ -651,3 +651,13 @@ This work packet is complete when:
 ```text
 This packet is the first packet in the current sequence that explicitly authorizes editing an existing baseline file: docs/adr/README.md. The authorization is narrow. It permits index annotation only. It does not permit changing individual ADR files or the ADR template.
 ```
+
+## Verification Commands
+
+Run the relevant repository verification commands for this historical packet:
+
+```bash
+bun run verify
+bash tools/eval/run-evaluations.sh
+bun run work-packet validate-repo
+```

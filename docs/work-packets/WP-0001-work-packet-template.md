@@ -502,3 +502,13 @@ This work packet is complete when:
 ```text
 This packet bootstraps the work packet template under the uploaded repository baseline. Because the work packet system itself is being created, the template may have been generated immediately before this packet. This packet records the governing scope and verification expectations for that template.
 ```
+
+## Verification Commands
+
+Run the relevant repository verification commands for this historical packet:
+
+```bash
+bun run verify
+bash tools/eval/run-evaluations.sh
+bun run work-packet validate-repo
+```

@@ -573,3 +573,13 @@ This work packet is complete when:
 ```text
 This packet intentionally creates a documentation-level verification baseline before introducing executable repo contract tests. The purpose is to define what should be checked before encoding those checks in scripts or CI.
 ```
+
+## Verification Commands
+
+Run the relevant repository verification commands for this historical packet:
+
+```bash
+bun run verify
+bash tools/eval/run-evaluations.sh
+bun run work-packet validate-repo
+```

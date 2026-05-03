@@ -687,3 +687,13 @@ This work packet is complete when:
 ```text
 This packet continues the baseline stabilization pattern: first make ambiguity visible, then review it, then decide whether any mutation is warranted. It deliberately protects both ADR-0013 and ADR-0015 until their relationship is understood.
 ```
+
+## Verification Commands
+
+Run the relevant repository verification commands for this historical packet:
+
+```bash
+bun run verify
+bash tools/eval/run-evaluations.sh
+bun run work-packet validate-repo
+```

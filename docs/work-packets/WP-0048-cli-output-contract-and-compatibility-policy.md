@@ -1,7 +1,7 @@
 ---
 id: WP-0048
 title: CLI Output Contract and Compatibility Policy
-status: planned
+status: "ready"
 version: 0.1.0
 created: 2026-05-03
 updated: 2026-05-03
@@ -35,6 +35,7 @@ affected_files:
   - packages/work-packet-cli/src/exit-codes.ts
   - packages/work-packet-cli/src/cli.test.ts
   - packages/work-packet-cli/README.md
+recommended_commit: "docs(work-packet): define cli output contract"
 ---
 
 # WP-0048: CLI Output Contract and Compatibility Policy
@@ -489,3 +490,27 @@ docs(work-packet): define cli output contract
 ```
 
 No runtime feature work should be included in this commit.
+
+## Scope
+
+This normalization section preserves the historical work-packet intent while aligning the document with the current ASF work-packet validation contract.
+
+## Non-Goals
+
+This normalization does not change the original implementation scope, introduce runtime behavior, or reinterpret the historical packet beyond validation alignment.
+
+## Verification Commands
+
+Run the relevant repository verification commands for this historical packet:
+
+```bash
+bun run verify
+bash tools/eval/run-evaluations.sh
+bun run work-packet validate-repo
+```
+
+## Recommended Atomic Commit
+
+```text
+docs(work-packet): define cli output contract
+```

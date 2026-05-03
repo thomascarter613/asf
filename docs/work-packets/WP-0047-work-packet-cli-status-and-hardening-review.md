@@ -1,7 +1,7 @@
 ---
 id: WP-0047
 title: Work Packet CLI Status and Hardening Review
-status: planned
+status: "ready"
 version: 0.1.0
 created: 2026-05-03
 updated: 2026-05-03
@@ -45,6 +45,7 @@ affected_files:
   - packages/work-packet-cli/src/exit-codes.ts
   - packages/work-packet-cli/src/format.ts
   - packages/work-packet-cli/src/cli.test.ts
+recommended_commit: "docs(work-packet): review validation cli hardening"
 ---
 
 # WP-0047: Work Packet CLI Status and Hardening Review
@@ -534,3 +535,23 @@ docs(work-packet): review validation cli hardening
 ```
 
 No runtime feature work should be included in this commit.
+
+## Scope
+
+This normalization section preserves the historical work-packet intent while aligning the document with the current ASF work-packet validation contract.
+
+## Verification Commands
+
+Run the relevant repository verification commands for this historical packet:
+
+```bash
+bun run verify
+bash tools/eval/run-evaluations.sh
+bun run work-packet validate-repo
+```
+
+## Recommended Atomic Commit
+
+```text
+docs(work-packet): review validation cli hardening
+```

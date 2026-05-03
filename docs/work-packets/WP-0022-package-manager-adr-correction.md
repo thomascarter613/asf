@@ -653,3 +653,13 @@ This packet is complete when:
 ```text
 This packet corrects a package-manager direction error before it becomes architectural drift. The correction is intentionally explicit: Bun becomes canonical through a superseding ADR, while ADR-0019 remains preserved as historical decision context.
 ```
+
+## Verification Commands
+
+Run the relevant repository verification commands for this historical packet:
+
+```bash
+bun run verify
+bash tools/eval/run-evaluations.sh
+bun run work-packet validate-repo
+```

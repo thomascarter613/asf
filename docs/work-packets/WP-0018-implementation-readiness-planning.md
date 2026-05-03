@@ -755,3 +755,13 @@ This work packet is complete when:
 ```text
 This packet is the formal bridge between baseline stabilization and implementation readiness. It keeps the project from jumping into runtime code before tooling, CI, evaluation, security, and first-slice planning are explicitly ordered.
 ```
+
+## Verification Commands
+
+Run the relevant repository verification commands for this historical packet:
+
+```bash
+bun run verify
+bash tools/eval/run-evaluations.sh
+bun run work-packet validate-repo
+```

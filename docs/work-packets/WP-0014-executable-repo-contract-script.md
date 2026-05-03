@@ -919,3 +919,13 @@ This work packet is complete when:
 ```text
 This packet is the first transition from documentation-level verification to executable local verification. It intentionally remains narrow: repository contract checks only, no CI, no package tooling, no runtime implementation.
 ```
+
+## Verification Commands
+
+Run the relevant repository verification commands for this historical packet:
+
+```bash
+bun run verify
+bash tools/eval/run-evaluations.sh
+bun run work-packet validate-repo
+```

@@ -631,3 +631,13 @@ This work packet is complete when:
 ```text
 This packet makes context continuity operational at the documentation level. It gives future sessions a stable current-state file, a handoff template, and source-selection rules before runtime retrieval or evaluation tooling exists.
 ```
+
+## Verification Commands
+
+Run the relevant repository verification commands for this historical packet:
+
+```bash
+bun run verify
+bash tools/eval/run-evaluations.sh
+bun run work-packet validate-repo
+```

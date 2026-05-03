@@ -619,3 +619,13 @@ This work packet is complete when:
 ```text
 This packet treats the root tree file as a historical baseline artifact. It intentionally avoids changing the file until the Project Steward explicitly approves a policy change through a later work packet.
 ```
+
+## Verification Commands
+
+Run the relevant repository verification commands for this historical packet:
+
+```bash
+bun run verify
+bash tools/eval/run-evaluations.sh
+bun run work-packet validate-repo
+```

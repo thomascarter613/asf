@@ -645,3 +645,13 @@ This work packet is complete when:
 ```text
 This packet keeps executable local verification synchronized with the growing implementation-readiness documentation baseline. It deliberately does not introduce package files, lockfiles, CI, runtime code, or executable evaluation harness code.
 ```
+
+## Verification Commands
+
+Run the relevant repository verification commands for this historical packet:
+
+```bash
+bun run verify
+bash tools/eval/run-evaluations.sh
+bun run work-packet validate-repo
+```

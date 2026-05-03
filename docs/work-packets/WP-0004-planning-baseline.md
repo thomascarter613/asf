@@ -623,3 +623,13 @@ This work packet is complete when:
 ```text
 This packet is intentionally scoped to planning baseline creation. It does not create runtime implementation, rewrite ADRs, or normalize repository structure. Its purpose is to make the current baseline actionable before verification and repo contract work begin.
 ```
+
+## Verification Commands
+
+Run the relevant repository verification commands for this historical packet:
+
+```bash
+bun run verify
+bash tools/eval/run-evaluations.sh
+bun run work-packet validate-repo
+```

@@ -14,9 +14,9 @@ Baseline Stabilization / Implementation Readiness
 
 Runtime implementation has not started.
 
-This repository currently contains planning, architecture, ADR, domain, verification, work-packet, context-continuity, root orientation, local repo-contract, minimal Bun package/tooling, and baseline CI workflow artifacts.
+This repository currently contains planning, architecture, ADR, domain, verification, work-packet, context-continuity, root orientation, local repo-contract, minimal Bun package/tooling, baseline CI workflow, and executable evaluation harness artifacts.
 
-It does not yet contain runtime application code, database schema, vector retrieval implementation, Qdrant collections, embedding pipelines, agent runtime code, or executable evaluation harness implementation.
+It does not yet contain runtime application code, database schema, vector retrieval implementation, Qdrant collections, embedding pipelines, agent runtime code, or runtime tests.
 
 ---
 
@@ -45,6 +45,8 @@ The current stabilization and implementation-readiness work has established:
 17. Bun-aware repo contract checks.
 18. CI baseline planning.
 19. CI workflow baseline.
+20. Executable evaluation harness baseline.
+21. Evaluation harness CI integration.
 
 The repository should continue to evolve through explicit work packets.
 
@@ -81,6 +83,7 @@ README.md
 docs/ai/00-current-state.md
 docs/ai/01-handoff-packet-template.md
 docs/ai/02-context-source-rules.md
+
 docs/planning/00-baseline-inventory.md
 docs/planning/01-planning-baseline.md
 docs/planning/02-adr-normalization-review.md
@@ -90,12 +93,21 @@ docs/planning/05-persistence-adr-overlap-review.md
 docs/planning/06-implementation-readiness-plan.md
 docs/planning/07-package-and-tooling-baseline.md
 docs/planning/08-ci-baseline-planning.md
+docs/planning/09-executable-evaluation-harness-planning.md
+docs/planning/10-evaluation-harness-ci-integration-planning.md
+
+tools/eval/README.md
+tools/eval/run-evaluations.sh
+
 docs/domain/00-domain-model.md
+
 docs/verification/00-verification-baseline.md
 docs/verification/01-repo-contract-baseline.md
 docs/verification/02-evaluation-harness-baseline.md
+
 docs/work-packets/README.md
 docs/work-packets/WORK-PACKET-TEMPLATE.md
+
 tools/check-repo-contract.sh
 .github/workflows/ci.yml
 ```
@@ -282,6 +294,55 @@ CI does not run runtime tests because runtime implementation has not started.
 
 The CI workflow verifies the repository baseline. It does not verify runtime application behavior because runtime implementation has not started.
 
+## Executable Evaluation Harness Status
+
+Executable evaluation harness exists.
+
+Current executable evaluation harness directory:
+
+```text
+tools/eval/
+```
+
+Current executable evaluation harness runner:
+
+```text
+tools/eval/run-evaluations.sh
+```
+
+Current local evaluation command:
+
+```bash
+bash tools/eval/run-evaluations.sh
+```
+
+Current executable evaluation case directory:
+
+```text
+tools/eval/cases/
+```
+
+Initial executable evaluation cases:
+
+```text
+EVAL-0001 active baseline is documented
+EVAL-0002 ADR gap preservation is documented
+EVAL-0003 package-manager boundary is enforced
+EVAL-0004 CI baseline exists
+EVAL-0005 runtime-not-started boundary is preserved
+```
+
+Current CI evaluation behavior:
+
+```bash
+bash tools/eval/run-evaluations.sh
+```
+
+The baseline CI workflow runs the executable evaluation harness after repository verification and before whitespace checking.
+
+The executable evaluation harness currently evaluates repository-governed SDLC baseline behavior. It does not evaluate runtime application behavior because runtime implementation has not started.
+
+Runtime tests do not exist yet.
 ---
 
 ## Work Packets
@@ -432,8 +493,8 @@ Documentation-level repo contract baseline exists.
 Executable local repo contract script exists.
 Bun-aware repo contract checks exist.
 CI workflow baseline exists.
-Documentation-level evaluation harness baseline exists.
-Executable evaluation harness implementation does not exist yet.
+Executable evaluation harness exists.
+Executable evaluation harness runs in CI.
 Runtime tests do not exist yet because runtime implementation has not started.
 ```
 
@@ -559,27 +620,23 @@ Future work must follow these rules:
 
 ## Recommended Next Work
 
-After `WP-0027: Current State and README CI Status Update`, the recommended next work is:
+After `WP-0032: Current State and README Evaluation Harness CI Status Update`, the recommended next work is:
 
-```text
-WP-0028: Executable Evaluation Harness Planning
-```
-
+WP-0033: Runtime Implementation Slice Plan
 Rationale:
 
-1. Baseline stabilization has produced core orientation, planning, ADR, verification, context, repo-contract, package/tooling, and CI artifacts.
-2. Local Bun verification now exists.
-3. CI baseline verification now exists.
-4. Runtime implementation has not started.
-5. The evaluation harness is still documentation-level only.
-6. The next readiness step should plan executable evaluation harness implementation before runtime implementation begins.
+Baseline stabilization has produced core orientation, planning, ADR, verification, context, repo-contract, package/tooling, CI, and executable evaluation harness artifacts.
+Local Bun verification now exists.
+CI baseline verification now exists.
+Executable evaluation harness verification now exists locally and in CI.
+Runtime implementation has not started.
+The next readiness step should define the first actual product/runtime implementation slice before writing product code.
 
 Recommended later work:
 
-```text
-WP-0029: Executable Evaluation Harness Baseline
-WP-0030: Runtime Implementation Slice Plan
-```
+Recommended later work:
+
+WP-0034: Work Packet Model and Validation Runtime Baseline
 
 ---
 
@@ -588,8 +645,9 @@ WP-0030: Runtime Implementation Slice Plan
 Run:
 
 ```bash
+bun install --frozen-lockfile
 bun run verify
-./tools/check-repo-contract.sh
+bash tools/eval/run-evaluations.sh
 git diff --check
 ```
 

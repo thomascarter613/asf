@@ -2,7 +2,7 @@
 title: "Current State"
 description: "Current repository state and continuation guide for the Agentic Software Framework, aligned to the uploaded repository tree baseline, current ADR lineage, planning baseline, domain model, verification baseline, work-packet sequence, Bun package/tooling setup, executable repo contract script, CI workflow baseline, and evaluation harness baseline."
 status: "active"
-version: "0.5.0"
+version: "0.6.0"
 created: "2026-05-03"
 updated: "2026-05-03"
 owner: "Project Steward"
@@ -41,6 +41,9 @@ related_documents:
   - "docs/ai/01-handoff-packet-template.md"
   - "docs/ai/02-context-source-rules.md"
   - "tools/check-repo-contract.sh"
+  - "tools/eval/README.md"
+  - "tools/eval/run-evaluations.sh"
+  - "docs/work-packets/WP-0032-current-state-and-readme-evaluation-harness-ci-status-update.md"
 ---
 
 # Current State
@@ -136,7 +139,9 @@ Evaluation harness status:
 
 ```text
 Documentation-level evaluation harness baseline exists at docs/verification/02-evaluation-harness-baseline.md.
-Executable evaluation harness implementation does not exist yet.
+Executable evaluation harness exists at tools/eval/run-evaluations.sh.
+Executable evaluation harness runs locally.
+Executable evaluation harness runs in CI.
 ```
 
 Context continuity status:
@@ -292,6 +297,70 @@ Current runtime boundary:
 
 ```text
 The baseline CI workflow does not run runtime tests because runtime implementation has not started.
+```
+
+---
+
+## 7. Executable Evaluation Harness State
+
+Executable evaluation harness exists.
+
+Current harness directory:
+
+```text
+tools/eval/
+```
+
+Current harness runner:
+
+```text
+tools/eval/run-evaluations.sh
+```
+
+Current local command:
+
+```bash
+bash tools/eval/run-evaluations.sh
+```
+
+Current case directory:
+
+```text
+tools/eval/cases/
+```
+
+Initial executable evaluation cases:
+
+```text
+EVAL-0001 Active baseline is documented
+EVAL-0002 ADR gap preservation is documented
+EVAL-0003 Package manager boundary is enforced
+EVAL-0004 CI baseline exists
+EVAL-0005 Runtime not started boundary is preserved
+```
+
+Current CI integration:
+
+```text
+.github/workflows/ci.yml runs bash tools/eval/run-evaluations.sh.
+```
+
+Current CI command sequence:
+
+```bash
+bun install --frozen-lockfile
+bun run verify
+bash tools/eval/run-evaluations.sh
+git diff --check
+```
+
+Current evaluation boundary:
+
+```text
+The executable evaluation harness evaluates repository-governed SDLC baseline behavior.
+The executable evaluation harness does not evaluate runtime application behavior.
+Runtime tests do not exist yet.
+Runtime implementation has not started.
 ```
 
 ---
@@ -472,18 +541,23 @@ WP-0024 Current State and README Bun Tooling Status Update
 WP-0025 CI Baseline Planning
 WP-0026 CI Workflow Baseline
 WP-0027 Current State and README CI Status Update
+WP-0028-executable-evaluation-harness-planning.md
+WP-0029-executable-evaluation-harness-baseline.md
+WP-0030 Evaluation Harness CI Integration Planning
+WP-0031 Evaluation Harness CI Integration
+WP-0032 Current State and README Evaluation Harness CI Status Update
 ```
 
 Current active packet:
 
 ```text
-WP-0027: Current State and README CI Status Update
+WP-0032: Current State and README Evaluation Harness CI Status Update
 ```
 
 Recommended next packet:
 
 ```text
-WP-0028: Executable Evaluation Harness Planning
+WP-0032: Current State and README Evaluation Harness CI Status Update
 ```
 
 ---

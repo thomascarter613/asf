@@ -63,6 +63,7 @@ tools/eval/cases/EVAL-0005-runtime-not-started-boundary.json
 tools/eval/cases/EVAL-0006-work-packet-core-package.json
 tools/eval/cases/EVAL-0007-runtime-implementation-status.json
 tools/eval/cases/EVAL-0008-work-packet-core-validation-behavior.json
+tools/eval/cases/EVAL-0009-work-packet-frontmatter-parser.json
 ```
 
 ## Supported Check Types
@@ -151,3 +152,15 @@ EVAL-0008 Work packet core validation behavior is covered.
 ```
 
 This case verifies validation constants, edge-case tests, and the local Bun test command.
+
+## Runtime Parser Cases
+
+The harness includes runtime parser coverage for the work-packet core package.
+
+Current parser case:
+
+```text
+EVAL-0009 Work packet frontmatter parser exists.
+```
+
+This case verifies parser source, parser tests, public exports, parser error codes, key field mapping, and the local Bun test command.

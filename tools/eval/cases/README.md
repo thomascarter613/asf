@@ -64,3 +64,7 @@ Do not add cases that inspect secrets, credentials, tokens, private keys, enviro
 EVAL-0008 Work packet core validation behavior is covered.
 
 When runtime behavior is hardened, add or update evaluation cases so the harness guards the hardened behavior.
+
+EVAL-0009 Work packet frontmatter parser exists.
+
+When parser behavior is added, evaluation cases must verify source files, public exports, error codes, and local tests.

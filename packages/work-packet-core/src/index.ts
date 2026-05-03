@@ -18,3 +18,10 @@ export {
   validateWorkPacketMarkdown,
   validateWorkPacketMetadata,
 } from "./work-packet-validation";
+
+export type { WorkPacketFrontmatterParseResult } from "./work-packet-frontmatter";
+
+export {
+  hasWorkPacketFrontmatter,
+  parseWorkPacketFrontmatter,
+} from "./work-packet-frontmatter";

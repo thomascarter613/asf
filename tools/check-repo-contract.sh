@@ -253,7 +253,7 @@ check_file "docs/planning/08-ci-baseline-planning.md"
 check_file "docs/planning/09-executable-evaluation-harness-planning.md"
 check_file "docs/planning/10-evaluation-harness-ci-integration-planning.md"
 check_file "docs/planning/13-work-packet-core-hardening.md"
-check_file "docs/work-packets/WP-0036-work-packet-core-hardening.md"
+check_file "docs/planning/14-work-packet-frontmatter-parser-runtime-slice-plan.md"
 
 print_header "Domain documents"
 
@@ -275,6 +275,8 @@ print_header "Work packet governance files"
 
 check_file "docs/work-packets/README.md"
 check_file "docs/work-packets/WORK-PACKET-TEMPLATE.md"
+
+
 
 print_header "Work packet files"
 
@@ -309,6 +311,11 @@ check_file "docs/work-packets/WP-0028-executable-evaluation-harness-planning.md"
 check_file "docs/work-packets/WP-0029-executable-evaluation-harness-baseline.md"
 check_file "docs/work-packets/WP-0030-evaluation-harness-ci-integration-planning.md"
 check_file "docs/work-packets/WP-0031-evaluation-harness-ci-integration.md"
+check_file "docs/work-packets/WP-0037-work-packet-frontmatter-parser-runtime-slice-plan.md"
+check_file "docs/work-packets/WP-0038-work-packet-frontmatter-parser-runtime-baseline.md"
+check_file "docs/work-packets/WP-0036-work-packet-core-hardening.md"
+check_file "docs/work-packets/WP-0037-work-packet-frontmatter-parser-runtime-slice-plan.md"
+check_file "docs/work-packets/WP-0038-work-packet-frontmatter-parser-runtime-baseline.md"
 
 print_header "Executable evaluation harness files"
 
@@ -322,6 +329,8 @@ check_file "tools/eval/cases/EVAL-0003-package-manager-boundary.json"
 check_file "tools/eval/cases/EVAL-0004-ci-baseline-presence.json"
 check_file "tools/eval/cases/EVAL-0005-runtime-not-started-boundary.json"
 check_file "tools/eval/cases/EVAL-0008-work-packet-core-validation-behavior.json"
+check_file "docs/work-packets/WP-0036-work-packet-core-hardening.md"
+
 check_file "tools/eval/results/.gitkeep"
 
 print_header "Executable evaluation harness contract"
@@ -449,10 +458,26 @@ check_contains "packages/work-packet-core/src/index.ts" 'REQUIRED_WORK_PACKET_MA
 check_contains "packages/work-packet-core/src/work-packet-validation.test.ts" 'whitespace-only id fails' "metadata validation tests whitespace-only ID"
 check_contains "packages/work-packet-core/src/work-packet-validation.test.ts" 'lowercase id format fails' "metadata validation tests lowercase ID"
 check_contains "packages/work-packet-core/src/work-packet-validation.test.ts" 'whitespace-only Markdown fails' "Markdown validation tests whitespace-only input"
+check_contains "packages/work-packet-core/src/index.ts" 'parseWorkPacketFrontmatter' "frontmatter parser is exported"
+check_contains "packages/work-packet-core/src/index.ts" 'hasWorkPacketFrontmatter' "frontmatter detector is exported"
+check_contains "packages/work-packet-core/src/work-packet-frontmatter.ts" 'parseWorkPacketFrontmatter' "frontmatter parser exists"
+check_contains "packages/work-packet-core/src/work-packet-frontmatter.ts" 'hasWorkPacketFrontmatter' "frontmatter detector exists"
+check_contains "packages/work-packet-core/src/work-packet-frontmatter.ts" 'missing-frontmatter' "frontmatter parser reports missing frontmatter"
+check_contains "packages/work-packet-core/src/work-packet-frontmatter.ts" 'unclosed-frontmatter' "frontmatter parser reports unclosed frontmatter"
+check_contains "packages/work-packet-core/src/work-packet-frontmatter.ts" 'recommendedCommit' "frontmatter parser maps recommended commit"
+check_contains "packages/work-packet-core/src/work-packet-frontmatter.test.ts" 'parsed metadata can pass metadata validation' "frontmatter parser integrates with metadata validation"
+
+check_contains "tools/eval/cases/EVAL-0009-work-packet-frontmatter-parser.json" 'parseWorkPacketFrontmatter' "EVAL-0009 checks parser export"
+check_contains "tools/eval/cases/EVAL-0009-work-packet-frontmatter-parser.json" 'bun test packages/work-packet-core' "EVAL-0009 checks package tests"
 check_contains "tools/eval/cases/EVAL-0008-work-packet-core-validation-behavior.json" 'WORK_PACKET_ID_PATTERN' "EVAL-0008 checks work packet ID pattern"
 check_contains "tools/eval/cases/EVAL-0008-work-packet-core-validation-behavior.json" 'bun test packages/work-packet-core' "EVAL-0008 checks work packet core tests"
+
 check_contains "docs/planning/13-work-packet-core-hardening.md" '^# Work Packet Core Hardening$' "work packet core hardening plan has expected heading"
+check_contains "docs/planning/14-work-packet-frontmatter-parser-runtime-slice-plan.md" '^# Work Packet Frontmatter Parser Runtime Slice Plan$' "frontmatter parser planning has expected heading"
 check_contains "docs/work-packets/WP-0036-work-packet-core-hardening.md" 'Work Packet Core Hardening' "WP-0036 records work packet core hardening"
+check_contains "docs/work-packets/WP-0037-work-packet-frontmatter-parser-runtime-slice-plan.md" 'Work Packet Frontmatter Parser Runtime Slice Plan' "WP-0037 records parser planning"
+check_contains "docs/work-packets/WP-0038-work-packet-frontmatter-parser-runtime-baseline.md" 'Work Packet Frontmatter Parser Runtime Baseline' "WP-0038 records parser implementation"
+
 print_header "Whitespace safety"
 
 check_git_diff_whitespace

@@ -1,0 +1,12 @@
+{
+  "id": "EVAL-0005",
+  "title": "Runtime not started boundary is preserved",
+  "category": "baseline-caveat-preservation",
+  "status": "active",
+  "required": true,
+  "purpose": "Verify that orientation documents preserve the runtime-not-started boundary.",
+  "checks": [
+    { "type": "file_contains", "path": "README.md", "pattern": "Runtime implementation has not started" },
+    { "type": "file_contains", "path": "docs/ai/00-current-state.md", "pattern": "Runtime implementation has not started" }
+  ]
+}

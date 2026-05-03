@@ -1,0 +1,14 @@
+{
+  "id": "EVAL-0002",
+  "title": "ADR gap preservation is documented",
+  "category": "adr-preservation",
+  "status": "active",
+  "required": true,
+  "purpose": "Verify that known ADR gaps remain documented and preserved.",
+  "checks": [
+    { "type": "file_contains", "path": "docs/adr/README.md", "pattern": "ADR-0007" },
+    { "type": "file_contains", "path": "docs/adr/README.md", "pattern": "ADR-0009" },
+    { "type": "file_contains", "path": "docs/adr/README.md", "pattern": "ADR-0010" },
+    { "type": "file_contains", "path": "docs/adr/README.md", "pattern": "ADR-0012" }
+  ]
+}

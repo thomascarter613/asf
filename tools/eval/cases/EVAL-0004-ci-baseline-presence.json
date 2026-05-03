@@ -1,0 +1,15 @@
+{
+  "id": "EVAL-0004",
+  "title": "CI baseline exists",
+  "category": "ci-baseline",
+  "status": "active",
+  "required": true,
+  "purpose": "Verify that the baseline GitHub Actions workflow exists and runs Bun repository verification.",
+  "checks": [
+    { "type": "file_exists", "path": ".github/workflows/ci.yml" },
+    { "type": "file_contains", "path": ".github/workflows/ci.yml", "pattern": "oven-sh/setup-bun@v2" },
+    { "type": "file_contains", "path": ".github/workflows/ci.yml", "pattern": "bun install --frozen-lockfile" },
+    { "type": "file_contains", "path": ".github/workflows/ci.yml", "pattern": "bun run verify" },
+    { "type": "file_contains", "path": ".github/workflows/ci.yml", "pattern": "git diff --check" }
+  ]
+}

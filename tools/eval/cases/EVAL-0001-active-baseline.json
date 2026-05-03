@@ -1,0 +1,12 @@
+{
+  "id": "EVAL-0001",
+  "title": "Active baseline is documented",
+  "category": "context-continuity",
+  "status": "active",
+  "required": true,
+  "purpose": "Verify that orientation documents preserve the active baseline rule.",
+  "checks": [
+    { "type": "file_contains", "path": "README.md", "pattern": "The uploaded repository tree is the active baseline" },
+    { "type": "file_contains", "path": "docs/ai/00-current-state.md", "pattern": "The uploaded repository tree is the active baseline" }
+  ]
+}

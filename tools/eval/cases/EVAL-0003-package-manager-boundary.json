@@ -1,0 +1,16 @@
+{
+  "id": "EVAL-0003",
+  "title": "Package manager boundary is enforced",
+  "category": "package-manager-boundary",
+  "status": "active",
+  "required": true,
+  "purpose": "Verify that Bun is represented by committed package files and pnpm package artifacts are absent.",
+  "checks": [
+    { "type": "file_exists", "path": "package.json" },
+    { "type": "file_exists", "path": "bun.lock" },
+    { "type": "file_absent", "path": "pnpm-workspace.yaml" },
+    { "type": "file_absent", "path": "pnpm-lock.yaml" },
+    { "type": "file_contains", "path": "package.json", "pattern": "bun run verify:repo" },
+    { "type": "file_not_contains", "path": "package.json", "pattern": "pnpm" }
+  ]
+}

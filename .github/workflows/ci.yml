@@ -27,6 +27,9 @@ jobs:
       - name: Verify repository
         run: bun run verify
 
+      - name: Test work packet core
+        run: bun test packages/work-packet-core
+
       - name: Run executable evaluation harness
         run: bash tools/eval/run-evaluations.sh
 

@@ -1,0 +1,13 @@
+{
+  "name": "@asf/work-packet-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Typed work-packet domain model and validation utilities for the Agentic Software Framework.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test src"
+  }
+}

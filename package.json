@@ -2,10 +2,16 @@
   "name": "agentic-software-framework",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "Repository-governed framework for disciplined AI-assisted software development.",
   "license": "UNLICENSED",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "verify": "bun run verify:repo",
-    "verify:repo": "bash tools/check-repo-contract.sh"
+    "verify:repo": "bash tools/check-repo-contract.sh",
+    "test": "bun test",
+    "test:work-packet-core": "bun test packages/work-packet-core"
   }
 }

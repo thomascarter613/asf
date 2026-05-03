@@ -1,12 +1,11 @@
 {
   "id": "EVAL-0005",
-  "title": "Runtime not started boundary is preserved",
+  "title": "Runtime not started boundary was preserved before WP-0034",
   "category": "baseline-caveat-preservation",
-  "status": "active",
-  "required": true,
-  "purpose": "Verify that orientation documents preserve the runtime-not-started boundary.",
+  "status": "deprecated",
+  "required": false,
+  "purpose": "Retired after WP-0034 because runtime implementation begins with the bounded work-packet core package.",
   "checks": [
-    { "type": "file_contains", "path": "README.md", "pattern": "Runtime implementation has not started" },
-    { "type": "file_contains", "path": "docs/ai/00-current-state.md", "pattern": "Runtime implementation has not started" }
+    { "type": "file_contains", "path": "README.md", "pattern": "Runtime implementation has not started" }
   ]
 }

@@ -1,0 +1,14 @@
+{
+  "id": "EVAL-0007",
+  "title": "Runtime implementation status is documented",
+  "category": "runtime-status",
+  "status": "active",
+  "required": true,
+  "purpose": "Verify that orientation documents accurately record that runtime implementation has started in a bounded package.",
+  "checks": [
+    { "type": "file_contains", "path": "README.md", "pattern": "Runtime implementation has started" },
+    { "type": "file_contains", "path": "README.md", "pattern": "packages/work-packet-core" },
+    { "type": "file_contains", "path": "docs/ai/00-current-state.md", "pattern": "Runtime implementation has started" },
+    { "type": "file_contains", "path": "docs/ai/00-current-state.md", "pattern": "packages/work-packet-core" }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "id": "EVAL-0006",
+  "title": "Work packet core package exists",
+  "category": "runtime-package-baseline",
+  "status": "active",
+  "required": true,
+  "purpose": "Verify that the first runtime package for work-packet validation exists.",
+  "checks": [
+    { "type": "file_exists", "path": "packages/work-packet-core/package.json" },
+    { "type": "file_exists", "path": "packages/work-packet-core/README.md" },
+    { "type": "file_exists", "path": "packages/work-packet-core/tsconfig.json" },
+    { "type": "file_exists", "path": "packages/work-packet-core/src/index.ts" },
+    { "type": "file_exists", "path": "packages/work-packet-core/src/work-packet.ts" },
+    { "type": "file_exists", "path": "packages/work-packet-core/src/work-packet-status.ts" },
+    { "type": "file_exists", "path": "packages/work-packet-core/src/work-packet-validation.ts" },
+    { "type": "file_exists", "path": "packages/work-packet-core/src/work-packet-validation.test.ts" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/index.ts", "pattern": "validateWorkPacketMetadata" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/index.ts", "pattern": "validateWorkPacketMarkdown" }
+  ]
+}

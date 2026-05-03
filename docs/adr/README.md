@@ -1,701 +1,506 @@
 ---
-title: "Architecture Decision Record Index"
-description: "Index and operating rules for Architecture Decision Records in the Agentic Software Framework, including purpose, numbering, statuses, required fields, review rules, acceptance rules, and initial ADR sequence."
-file: docs/adr/README.md
+title: "ADR Index"
+description: "Architecture Decision Record index for the Agentic Software Framework, including current ADR inventory, known ADR number gaps, baseline caveats, and guidance against silent ADR renumbering, deletion, or supersession."
 status: "proposed"
 version: "0.1.0"
-created: "2026-05-02"
-updated: "2026-05-02"
+created: "2026-05-03"
+updated: "2026-05-03"
 owner: "Project Steward"
 audience:
   - "project-steward"
   - "principal-engineering-partner"
-  - "engineering"
   - "architecture"
-  - "security"
-  - "qa"
-  - "devops"
+  - "engineering"
+  - "documentation"
   - "future-contributors"
   - "future-ai-agents"
 document_type: "adr-index"
 canonical: false
 related_documents:
-  - "docs/product/00-product-inception-brief.md"
-  - "docs/product/01-product-charter.md"
-  - "docs/product/02-stakeholder-and-user-model.md"
-  - "docs/product/03-software-requirements-specification.md"
-  - "docs/architecture/00-architecture-overview.md"
   - "docs/adr/ADR-TEMPLATE.md"
+  - "docs/planning/00-baseline-inventory.md"
+  - "docs/planning/02-adr-normalization-review.md"
+  - "docs/work-packets/WP-0012-adr-index-gap-and-status-annotation.md"
 ---
 
-# Architecture Decision Record Index
+# ADR Index
 
 ## 1. Purpose
 
 This document is the Architecture Decision Record index for the **Agentic Software Framework**.
 
-Architecture Decision Records exist to preserve the reasoning behind important product, architecture, technical, security, operational, repository, AI-provider, and workflow decisions.
+The uploaded repository tree is the active baseline.
 
-The Agentic Software Framework depends on explicit decisions because the product itself is designed to prevent AI-assisted software development from becoming ad hoc, undocumented, unverifiable, or architecturally inconsistent.
+This index records:
 
-This ADR system ensures that material decisions are:
+1. Current ADR support files.
+2. Current ADR inventory.
+3. Known ADR number gaps.
+4. Known ADR topic overlap.
+5. ADR status annotation guidance.
+6. Rules against silent ADR renumbering, deletion, gap filling, or supersession.
+7. Future ADR maintenance work.
 
-1. Visible.
-2. Numbered.
-3. Reviewable.
-4. Traceable.
-5. Version-controlled.
-6. Human-approved.
-7. Connected to requirements and implementation.
-8. Available to future humans and future AI sessions.
-
----
-
-## 2. Why ADRs Matter for This Product
-
-The Agentic Software Framework is not a simple application. It is a governed AI-native SDLC control plane.
-
-The product will make or enforce decisions about:
-
-1. Product delivery surface.
-2. Application architecture.
-3. Repository truth model.
-4. Artifact formats.
-5. AI provider boundaries.
-6. Repository integration behavior.
-7. Secrets detection and redaction.
-8. Work packet execution.
-9. Verification model.
-10. Persistence strategy.
-11. Authentication and account ownership.
-12. Billing readiness.
-13. Export behavior.
-14. Human approval gates.
-15. Future team and enterprise expansion.
-
-Without ADRs, these decisions would drift into chat history, implementation assumptions, or hidden code behavior.
-
-That is unacceptable for this product.
+This index does not rename, delete, renumber, rewrite, supersede, or create ADRs.
 
 ---
 
-## 3. ADR Definition
+## 2. ADR Governance Rule
 
-An Architecture Decision Record is a durable document that records one material decision.
-
-An ADR should explain:
-
-1. The decision being made.
-2. The context that made the decision necessary.
-3. The options considered.
-4. The chosen option.
-5. The rationale.
-6. The consequences.
-7. The verification impact.
-8. The implementation impact.
-9. The follow-up work required.
-
-An ADR does not need to be long, but it must be explicit.
-
----
-
-## 4. What Requires an ADR
-
-An ADR is required when a decision materially affects:
-
-1. System architecture.
-2. Product delivery model.
-3. Repository structure.
-4. Data model.
-5. Persistence strategy.
-6. Authentication or authorization.
-7. Security posture.
-8. AI provider integration.
-9. Repository integration.
-10. Verification model.
-11. Deployment model.
-12. Billing model.
-13. Major dependency choice.
-14. Source-of-truth rules.
-15. Workflow governance.
-16. Work packet execution.
-17. Public API or integration contracts.
-18. Future maintainability.
-
-If changing the decision later would be expensive, risky, confusing, security-sensitive, or architecture-shaping, it needs an ADR.
-
----
-
-## 5. What Does Not Require an ADR
-
-An ADR is usually not required for:
-
-1. Typo fixes.
-2. Small documentation edits.
-3. Minor copy changes.
-4. Non-architectural refactors.
-5. Routine test additions.
-6. Small internal implementation details.
-7. Formatting-only changes.
-8. Non-material file moves.
-9. Temporary implementation notes already captured in work packets.
-
-When uncertain, prefer creating an ADR if the decision could affect future architecture, security, integration, or workflow.
-
----
-
-## 6. ADR Numbering Convention
-
-ADR files must use the following naming format:
-
-```text
-ADR-0001-short-kebab-case-title.md
-ADR-0002-short-kebab-case-title.md
-ADR-0003-short-kebab-case-title.md
-````
+ADRs are durable architecture decision-history artifacts.
 
 Rules:
 
-1. ADR numbers are sequential.
-2. ADR numbers are never reused.
-3. Superseded ADRs keep their original numbers.
-4. New decisions that replace old decisions get new ADR numbers.
-5. File names must be lowercase kebab-case after the ADR number.
-6. The ADR number must match the title and frontmatter.
+1. ADR numbers are historical identifiers.
+2. ADR numbers must not be reused.
+3. ADR files must not be silently renamed.
+4. ADR files must not be silently deleted.
+5. ADR gaps must not be silently filled.
+6. ADRs must not be superseded without an explicit follow-up decision.
+7. Duplicate-looking ADRs must not be deleted without content-level review.
+8. ADR index updates must not mutate individual ADR decisions.
+9. Future ADR maintenance must happen through explicit work packets.
 
-Example:
+---
+
+## 3. ADR Support Files
+
+| File | Purpose | Status |
+| --- | --- | --- |
+| `docs/adr/README.md` | ADR index. | Present |
+| `docs/adr/ADR-TEMPLATE.md` | Reusable ADR template. | Present |
+
+---
+
+## 4. Current ADR Inventory
+
+The current baseline contains the following ADR files.
+
+| ADR | File | Topic | Baseline Status |
+| --- | --- | --- | --- |
+| `ADR-0001` | `docs/adr/ADR-0001-adopt-architecture-decision-records-as-a-first-class-engineering-artifact.md` | ADRs as first-class engineering artifacts. | Present in baseline |
+| `ADR-0002` | `docs/adr/ADR-0002-repository-based-context-continuity.md` | Repository-based context continuity. | Present in baseline |
+| `ADR-0003` | `docs/adr/ADR-0003-repository-topology-bounded-monorepos-over-monolith-or-full-fragmentation.md` | Repository topology and bounded monorepos. | Present in baseline |
+| `ADR-0004` | `docs/adr/ADR-0004-access-tier-model-four-tier-repository-classification.md` | Four-tier repository access classification. | Present in baseline |
+| `ADR-0005` | `docs/adr/ADR-0005-clean-room-architecture-and-pattern-adoption.md` | Clean-room architecture and pattern adoption. | Present in baseline |
+| `ADR-0006` | `docs/adr/ADR-0006-canonical-repository-plus-vector-retrieval.md` | Canonical repository plus vector retrieval. | Present in baseline |
+| `ADR-0008` | `docs/adr/ADR-0008-foundry-control-plane.md` | Foundry Control Plane. | Present in baseline |
+| `ADR-0011` | `docs/adr/ADR-0011-dependency-pinning-policy-exact-lockfiles-committed-for-all-ecosystems.md` | Dependency pinning and exact lockfiles. | Present in baseline |
+| `ADR-0013` | `docs/adr/ADR-0013-polyglot-persistence-and-qdrant-retrieval.md` | Polyglot persistence and Qdrant retrieval. | Present in baseline; possible overlap with ADR-0015 |
+| `ADR-0014` | `docs/adr/ADR-0014-polyglot-language-strategy-python-for-ml-rust-for-serving-typescript-for-product.md` | Polyglot language strategy. | Present in baseline |
+| `ADR-0015` | `docs/adr/ADR-0015-polyglot-persistence-and-qdrant-retrieval.md` | Polyglot persistence and Qdrant retrieval. | Present in baseline; possible overlap with ADR-0013 |
+| `ADR-0016` | `docs/adr/ADR-0016-worktree-based-parallel-execution.md` | Worktree-based parallel execution. | Present in baseline |
+| `ADR-0017` | `docs/adr/ADR-0017-foundry-event-bus-and-notification-router.md` | Foundry event bus and notification router. | Present in baseline |
+| `ADR-0018` | `docs/adr/ADR-0018-work-packet-lifecycle.md` | Work packet lifecycle. | Present in baseline |
+| `ADR-0019` | `docs/adr/ADR-0019-primary-package-managers-uv-cargo-and-pnpm.md` | Primary package managers. | Present in baseline |
+| `ADR-0020` | `docs/adr/ADR-0020-directive-compiler-and-work-protocols.md` | Directive compiler and work protocols. | Present in baseline |
+| `ADR-0021` | `docs/adr/ADR-0021-repo-contract-testing.md` | Repo contract testing. | Present in baseline |
+| `ADR-0022` | `docs/adr/ADR-0022-evaluation-harness-for-context-continuity-and-agent-execution.md` | Evaluation harness for context continuity and agent execution. | Present in baseline |
+
+---
+
+## 5. Known ADR Number Gaps
+
+The accepted baseline has known ADR number gaps.
+
+Known absent numbers:
 
 ```text
-docs/adr/ADR-0001-product-delivery-surface.md
-```
-
----
-
-## 7. ADR Status Values
-
-ADR status must be one of:
-
-1. `draft`
-2. `proposed`
-3. `accepted`
-4. `superseded`
-5. `deprecated`
-6. `rejected`
-
-## 7.1 Draft
-
-The ADR is being shaped and is not ready for decision.
-
-## 7.2 Proposed
-
-The ADR is complete enough for review, but the decision is not yet binding.
-
-## 7.3 Accepted
-
-The ADR is binding and must constrain future product, architecture, and implementation work.
-
-## 7.4 Superseded
-
-The ADR was once accepted but has been replaced by a later ADR.
-
-## 7.5 Deprecated
-
-The ADR is no longer recommended or relevant, but it has not necessarily been replaced by a direct successor.
-
-## 7.6 Rejected
-
-The ADR records an option that was considered and intentionally not chosen.
-
----
-
-## 8. Canonical ADR Rule
-
-An ADR becomes canonical only when:
-
-1. Its status is `accepted`.
-2. Its frontmatter has `canonical: true`.
-3. It records a clear decision.
-4. It identifies consequences.
-5. It identifies verification impact.
-6. It has been reviewed by the Project Steward.
-7. Any superseded decision is explicitly linked.
-
-AI-generated ADRs must begin as `draft` or `proposed`.
-
-No AI-generated ADR is canonical merely because it exists.
-
----
-
-## 9. Required ADR Frontmatter
-
-Every ADR must include YAML frontmatter.
-
-Minimum required frontmatter:
-
-```yaml
----
-title: ""
-description: ""
-status: "proposed"
-version: "0.1.0"
-created: "YYYY-MM-DD"
-updated: "YYYY-MM-DD"
-owner: "Project Steward"
-audience:
-  - "project-steward"
-  - "principal-engineering-partner"
-  - "engineering"
-document_type: "architecture-decision-record"
-canonical: false
-adr_number: "ADR-0000"
-decision_date: ""
-supersedes: ""
-superseded_by: ""
-related_documents: []
-related_requirements: []
-related_work_packets: []
----
-```
-
-Additional fields may be added when useful.
-
----
-
-## 10. Required ADR Sections
-
-Every ADR should include these sections:
-
-1. Title.
-2. Status.
-3. Decision.
-4. Context.
-5. Problem.
-6. Decision Drivers.
-7. Options Considered.
-8. Chosen Option.
-9. Rationale.
-10. Consequences.
-11. Security Impact.
-12. Verification Impact.
-13. Implementation Impact.
-14. Migration or Reversal Plan.
-15. Follow-up Work.
-16. Related Documents.
-17. Acceptance Criteria.
-
-For small decisions, sections may be concise, but they should not be omitted without reason.
-
----
-
-## 11. ADR Review Rules
-
-Before an ADR is accepted, review it against these questions:
-
-1. Does the decision advance the product mission?
-2. Does it preserve architectural integrity?
-3. Does it reduce ambiguity?
-4. Does it improve traceability?
-5. Does it preserve exportability where relevant?
-6. Does it respect security and trust constraints?
-7. Does it avoid unnecessary complexity?
-8. Does it avoid premature enterprise overbuild?
-9. Does it have a verification path?
-10. Does it identify consequences honestly?
-11. Does it avoid hidden vendor lock-in?
-12. Does it keep human approval where needed?
-13. Does it preserve future optionality where practical?
-
----
-
-## 12. ADR Acceptance Rules
-
-An ADR may be accepted only when:
-
-1. The decision is clear.
-2. The chosen option is explicit.
-3. The alternatives are listed.
-4. The rationale is documented.
-5. Consequences are documented.
-6. Security impact is documented.
-7. Verification impact is documented.
-8. Implementation impact is documented.
-9. Follow-up work is documented.
-10. The Project Steward has reviewed it.
-
-Acceptance should be represented by:
-
-```yaml
-status: "accepted"
-canonical: true
-decision_date: "YYYY-MM-DD"
-```
-
-Until then, ADRs remain proposed.
-
----
-
-## 13. ADR and Implementation Relationship
-
-Accepted ADRs constrain implementation.
-
-Implementation work must not contradict accepted ADRs without one of the following:
-
-1. A new ADR superseding the prior decision.
-2. A documented exception approved by the Project Steward.
-3. A temporary implementation note with a clear rollback or correction path.
-
-Work packets must reference relevant ADRs when they implement or depend on architecture decisions.
-
----
-
-## 14. ADR and Work Packet Relationship
-
-Work packets should reference ADRs when they:
-
-1. Implement an architectural decision.
-2. Depend on an architectural decision.
-3. Change a major system boundary.
-4. Add a dependency.
-5. Add an integration.
-6. Affect security posture.
-7. Affect data ownership.
-8. Affect repository behavior.
-9. Affect verification behavior.
-
-A work packet that conflicts with an accepted ADR is not ready.
-
----
-
-## 15. ADR and Verification Relationship
-
-Every ADR should explain how the decision affects verification.
-
-Examples:
-
-1. A persistence ADR should affect database tests and migration checks.
-2. A repository integration ADR should affect permission tests and security checks.
-3. A verification model ADR should affect work packet completion rules.
-4. An artifact format ADR should affect export and documentation checks.
-5. An AI provider ADR should affect redaction, provider metadata, and generation records.
-
-If a decision cannot be verified directly, the ADR should explain how conformance will be inspected or reviewed.
-
----
-
-## 16. ADR and AI Behavior Relationship
-
-Future AI sessions must respect accepted ADRs.
-
-AI-generated recommendations must not casually override accepted decisions.
-
-When an AI recommendation conflicts with an accepted ADR, the correct behavior is:
-
-1. Surface the conflict.
-2. Explain the issue.
-3. Recommend whether a new ADR is needed.
-4. Avoid implementing the conflicting change until the decision is resolved.
-
-This rule is central to preventing architectural drift.
-
----
-
-## 17. Initial ADR Sequence
-
-The initial ADR sequence is derived from the Product Charter, SRS, Architecture Overview, and resolved SRS open questions.
-
-### ADR-0001: Product Delivery Surface
-
-File:
-
-```text
-docs/adr/ADR-0001-product-delivery-surface.md
-```
-
-Decision:
-
-Should the first implementation be SaaS-first, CLI-first, repository-template-first, or hybrid?
-
-Recommended direction:
-
-SaaS-first web control plane with repository-ready Markdown export and future CLI companion.
-
-### ADR-0002: Modular Monolith Architecture
-
-File:
-
-```text
-docs/adr/ADR-0002-modular-monolith-architecture.md
-```
-
-Decision:
-
-Should the MVP begin as a modular monolith or multiple services?
-
-Recommended direction:
-
-Start with a modular monolith and explicit internal domain boundaries.
-
-### ADR-0003: Repository as Durable Source of Truth
-
-File:
-
-```text
-docs/adr/ADR-0003-repository-as-durable-source-of-truth.md
-```
-
-Decision:
-
-How strongly should the repository be treated as canonical relative to SaaS database state?
-
-Recommended direction:
-
-The SaaS stores structured operational state, but durable artifacts must be exportable and repository-ready.
-
-### ADR-0004: Artifact Format and Metadata
-
-File:
-
-```text
-docs/adr/ADR-0004-artifact-format-and-metadata.md
-```
-
-Decision:
-
-What format should durable artifacts use?
-
-Recommended direction:
-
-Markdown with YAML frontmatter as first-class export format, with structured internal representation where needed.
-
-### ADR-0005: AI Provider Abstraction
-
-File:
-
-```text
-docs/adr/ADR-0005-ai-provider-abstraction.md
-```
-
-Decision:
-
-Should the system bind to one AI provider or use an abstraction?
-
-Recommended direction:
-
-Use provider abstraction from the beginning.
-
-### ADR-0006: GitHub Integration Strategy
-
-File:
-
-```text
-docs/adr/ADR-0006-github-integration-strategy.md
-```
-
-Decision:
-
-How should repository integration begin?
-
-Recommended direction:
-
-GitHub-first, least-privilege, read/export before write, no silent mutation.
-
-### ADR-0007: Secrets Detection and Redaction Boundary
-
-File:
-
-```text
-docs/adr/ADR-0007-secrets-detection-and-redaction-boundary.md
-```
-
-Decision:
-
-How should sensitive files and secrets be handled?
-
-Recommended direction:
-
-Use path denylist, pattern detection, redaction before AI context, warnings on sensitive files, and explicit approval for sensitive export.
-
-### ADR-0008: Work Packet Execution Model
-
-File:
-
-```text
-docs/adr/ADR-0008-work-packet-execution-model.md
-```
-
-Decision:
-
-What is the canonical unit of controlled implementation?
-
-Recommended direction:
-
-Work packet is the atomic execution unit.
-
-### ADR-0009: Verification Model
-
-File:
-
-```text
-docs/adr/ADR-0009-verification-model.md
-```
-
-Decision:
-
-Should verification be guided, executed, or ingested in MVP?
-
-Recommended direction:
-
-MVP supports guided verification and evidence recording; hosted execution and CI ingestion come later.
-
-### ADR-0010: Initial Persistence Strategy
-
-File:
-
-```text
-docs/adr/ADR-0010-initial-persistence-strategy.md
-```
-
-Decision:
-
-What storage architecture should support projects, artifacts, requirements, work packets, verification, and traceability?
-
-Recommended direction:
-
-Use relational persistence for core structured entities, with exportable Markdown artifacts.
-
-### ADR-0011: Authentication and Account Model
-
-File:
-
-```text
-docs/adr/ADR-0011-authentication-and-account-model.md
-```
-
-Decision:
-
-What is the initial authentication and account ownership model for SaaS MVP?
-
-Recommended direction:
-
-Basic user, account, workspace, and project ownership model first; teams and enterprise identity later.
-
-### ADR-0012: Billing Readiness
-
-File:
-
-```text
-docs/adr/ADR-0012-billing-readiness.md
-```
-
-Decision:
-
-Should billing be implemented in MVP or merely designed for?
-
-Recommended direction:
-
-Represent plan and usage concepts early; defer full paid billing integration until paid beta or launch milestone unless needed sooner.
-
----
-
-## 18. ADR Index Table
-
-| ADR      | Title                                    | Status  | File                                                            |
-| -------- | ---------------------------------------- | ------- | --------------------------------------------------------------- |
-| ADR-0001 | Product Delivery Surface                 | Planned | `docs/adr/ADR-0001-product-delivery-surface.md`                 |
-| ADR-0002 | Modular Monolith Architecture            | Planned | `docs/adr/ADR-0002-modular-monolith-architecture.md`            |
-| ADR-0003 | Repository as Durable Source of Truth    | Planned | `docs/adr/ADR-0003-repository-as-durable-source-of-truth.md`    |
-| ADR-0004 | Artifact Format and Metadata             | Planned | `docs/adr/ADR-0004-artifact-format-and-metadata.md`             |
-| ADR-0005 | AI Provider Abstraction                  | Planned | `docs/adr/ADR-0005-ai-provider-abstraction.md`                  |
-| ADR-0006 | GitHub Integration Strategy              | Planned | `docs/adr/ADR-0006-github-integration-strategy.md`              |
-| ADR-0007 | Secrets Detection and Redaction Boundary | Planned | `docs/adr/ADR-0007-secrets-detection-and-redaction-boundary.md` |
-| ADR-0008 | Work Packet Execution Model              | Planned | `docs/adr/ADR-0008-work-packet-execution-model.md`              |
-| ADR-0009 | Verification Model                       | Planned | `docs/adr/ADR-0009-verification-model.md`                       |
-| ADR-0010 | Initial Persistence Strategy             | Planned | `docs/adr/ADR-0010-initial-persistence-strategy.md`             |
-| ADR-0011 | Authentication and Account Model         | Planned | `docs/adr/ADR-0011-authentication-and-account-model.md`         |
-| ADR-0012 | Billing Readiness                        | Planned | `docs/adr/ADR-0012-billing-readiness.md`                        |
-
----
-
-## 19. Updating This Index
-
-This index must be updated when:
-
-1. A new ADR is added.
-2. An ADR changes status.
-3. An ADR is superseded.
-4. An ADR is deprecated.
-5. A planned ADR is renamed.
-6. A new ADR category becomes necessary.
-7. ADR conventions change.
-
-Index updates should be committed with the ADR they describe unless the index update is itself a separate governance change.
-
----
-
-## 20. ADR Acceptance Criteria
-
-The ADR system is ready when:
-
-1. This index exists.
-2. The ADR template exists.
-3. ADR numbering rules are documented.
-4. ADR statuses are documented.
-5. ADR acceptance rules are documented.
-6. The initial ADR sequence is documented.
-7. ADRs can be linked to requirements, architecture, work packets, and verification.
-8. Future AI sessions know that accepted ADRs constrain future implementation.
-
----
-
-## 21. Next Artifact
-
-The next artifact should be:
-
-```text
-docs/adr/ADR-TEMPLATE.md
-```
-
-After the template is created, the next ADR should be:
-
-```text
-docs/adr/ADR-0001-product-delivery-surface.md
-```
-
-ADR-0001 should decide whether the MVP begins as SaaS-first, CLI-first, repository-template-first, or hybrid.
-
+ADR-0007
+ADR-0009
+ADR-0010
+ADR-0012
 ````
 
-## Action required on your end
+These are **known gaps**, not automatic errors.
 
-Create the file:
+This index does not classify these gaps as retired, reserved, missing, rejected, or deleted because the current baseline does not contain enough evidence to assign that meaning safely.
 
-```bash
-mkdir -p docs/adr
-nano docs/adr/README.md
-````
+Current policy:
 
-Paste the full contents above.
+```text
+Treat ADR-0007, ADR-0009, ADR-0010, and ADR-0012 as known baseline gaps.
+```
 
-## Verification command
+Rules:
 
-From the repository root, run:
+1. Do not create placeholder ADRs solely to fill these numbers.
+2. Do not renumber later ADRs to remove these gaps.
+3. Do not reuse the missing numbers for unrelated future decisions without explicit approval.
+4. Do not treat the absence of these numbers as a repo contract failure.
+5. Document the gaps as baseline facts until a future ADR maintenance packet decides otherwise.
+
+---
+
+## 6. Known ADR Topic Overlap
+
+The current baseline has a known potential overlap:
+
+```text
+ADR-0013
+ADR-0015
+```
+
+Files:
+
+```text
+docs/adr/ADR-0013-polyglot-persistence-and-qdrant-retrieval.md
+docs/adr/ADR-0015-polyglot-persistence-and-qdrant-retrieval.md
+```
+
+Both filenames reference:
+
+```text
+Polyglot Persistence and Qdrant Retrieval
+```
+
+Current policy:
+
+```text
+Preserve both ADR-0013 and ADR-0015 until a future content-level review determines their relationship.
+```
+
+This index does not decide whether they are:
+
+1. Duplicates.
+2. Revisions.
+3. Split-scope decisions.
+4. Supersession candidates.
+5. Complementary decisions.
+6. Historical artifacts.
+
+Future follow-up should compare the content of both files before making any decision.
+
+Recommended future packet:
+
+```text
+WP-0013: Persistence ADR Overlap Review
+```
+
+---
+
+## 7. Status Annotation Guidance
+
+The `Baseline Status` column in this index means:
+
+```text
+Whether the ADR file is present in the accepted uploaded repository baseline.
+```
+
+It does **not** necessarily mean:
+
+```text
+accepted
+rejected
+deprecated
+superseded
+implemented
+```
+
+Decision status should be taken from the individual ADR file if that file contains explicit status metadata.
+
+Until a dedicated ADR status metadata review is completed:
+
+1. Do not infer decision status from the index alone.
+2. Do not assume every present ADR is fully implemented.
+3. Do not assume every present ADR has normalized metadata.
+4. Do not assume a duplicate-looking topic is superseded.
+5. Do not change ADR statuses without an explicit packet.
+
+Recommended future packet:
+
+```text
+ADR Status Metadata Review
+```
+
+or, if using the current work-packet sequence:
+
+```text
+WP-0014 or later: ADR Status Metadata Review
+```
+
+---
+
+## 8. Thematic ADR Groups
+
+The current ADR lineage may be understood through these themes.
+
+## 8.1 Governance and Repository Memory
+
+Relevant ADRs:
+
+```text
+ADR-0001
+ADR-0002
+ADR-0003
+ADR-0006
+ADR-0021
+```
+
+Theme:
+
+```text
+Repository as governed durable memory and enforceable structure.
+```
+
+## 8.2 Access, Safety, and Clean-Room Boundaries
+
+Relevant ADRs:
+
+```text
+ADR-0004
+ADR-0005
+```
+
+Theme:
+
+```text
+Repository access classification, sensitivity boundaries, and safe pattern adoption.
+```
+
+## 8.3 Foundry Execution Model
+
+Relevant ADRs:
+
+```text
+ADR-0008
+ADR-0016
+ADR-0017
+ADR-0018
+ADR-0020
+```
+
+Theme:
+
+```text
+Foundry orchestration, work packet lifecycle, worktree execution, event routing, and directive protocols.
+```
+
+## 8.4 Persistence, Retrieval, and Language Strategy
+
+Relevant ADRs:
+
+```text
+ADR-0011
+ADR-0013
+ADR-0014
+ADR-0015
+ADR-0019
+```
+
+Theme:
+
+```text
+Polyglot implementation, dependency pinning, package managers, persistence, and retrieval.
+```
+
+## 8.5 Evaluation and Quality
+
+Relevant ADRs:
+
+```text
+ADR-0021
+ADR-0022
+```
+
+Theme:
+
+```text
+Repo contract testing and evaluation harness design.
+```
+
+---
+
+## 9. Prohibited ADR Index Interpretations
+
+Do not interpret this index as permission to:
+
+1. Rename ADR files.
+2. Renumber ADR files.
+3. Delete ADR files.
+4. Fill ADR number gaps.
+5. Create placeholder ADRs.
+6. Supersede ADRs.
+7. Change ADR statuses.
+8. Rewrite ADR titles.
+9. Rewrite ADR content.
+10. Move ADR files.
+11. Treat ADR-0013 as superseded.
+12. Treat ADR-0015 as superseded.
+13. Treat missing ADR numbers as repo contract failures.
+14. Treat baseline presence as proof of runtime implementation.
+15. Rewrite Git history to hide ADR lineage.
+
+---
+
+## 10. Relationship to ADR Normalization Review
+
+The current ADR gap and overlap findings are described in more detail in:
+
+```text
+docs/planning/02-adr-normalization-review.md
+```
+
+That document is the review artifact.
+
+This index is the reader-facing ADR directory annotation.
+
+The review artifact should be consulted before making any ADR maintenance decision.
+
+---
+
+## 11. Relationship to Repo Contract Testing
+
+Repo contract testing should verify:
+
+1. `docs/adr/README.md` exists.
+2. `docs/adr/ADR-TEMPLATE.md` exists.
+3. Current baseline ADR files exist.
+4. Known ADR gaps are allowed.
+5. ADR-0013 and ADR-0015 both remain present until explicitly reviewed.
+6. ADR contract checks do not assume contiguous numbering.
+7. ADR contract checks do not auto-fix or mutate ADR files.
+
+Repo contract testing should not fail merely because these files do not exist:
+
+```text
+docs/adr/ADR-0007-*.md
+docs/adr/ADR-0009-*.md
+docs/adr/ADR-0010-*.md
+docs/adr/ADR-0012-*.md
+```
+
+---
+
+## 12. Relationship to Context Continuity
+
+Future AI and handoff sessions should preserve these ADR facts:
+
+1. ADRs are first-class architecture decision artifacts.
+2. Current ADR numbers are historical identifiers.
+3. ADR gaps exist.
+4. ADR-0013 and ADR-0015 may overlap.
+5. No ADR should be silently renamed, deleted, renumbered, or superseded.
+6. The ADR normalization review is the relevant planning reference for ADR cleanup.
+
+Relevant context documents:
+
+```text
+docs/ai/00-current-state.md
+docs/ai/02-context-source-rules.md
+```
+
+---
+
+## 13. Future ADR Maintenance Work
+
+Recommended future ADR maintenance packets include:
+
+## 13.1 Persistence ADR Overlap Review
+
+Suggested packet:
+
+```text
+WP-0013: Persistence ADR Overlap Review
+```
+
+Purpose:
+
+```text
+Compare ADR-0013 and ADR-0015 at content level and recommend whether to preserve, clarify, rename, supersede, or split scope.
+```
+
+## 13.2 ADR Status Metadata Review
+
+Suggested packet:
+
+```text
+WP-0014 or later: ADR Status Metadata Review
+```
+
+Purpose:
+
+```text
+Review ADR frontmatter/status consistency and determine whether the repository should normalize ADR metadata.
+```
+
+## 13.3 ADR Thematic Index Improvement
+
+Suggested packet:
+
+```text
+Future packet: ADR Thematic Index Improvement
+```
+
+Purpose:
+
+```text
+Improve the ADR index with thematic grouping, implementation relevance, supersession links, and status metadata after the status model is confirmed.
+```
+
+---
+
+## 14. Maintenance Rules
+
+When updating this index:
+
+1. Preserve existing ADR numbers.
+2. Preserve known ADR gaps unless a future explicit decision changes their classification.
+3. Add new ADRs in chronological order.
+4. Do not reuse ADR numbers.
+5. Do not remove ADR rows unless the removal is authorized by a packet.
+6. Do not mark ADRs superseded unless individual ADR files and the index are updated together under an explicit packet.
+7. Keep references repository-relative.
+8. Keep gap and overlap caveats visible.
+9. Update repo contract expectations if the ADR inventory changes.
+10. Update context-continuity docs if ADR state changes meaningfully.
+
+---
+
+## 15. Verification
+
+Run:
 
 ```bash
 test -f docs/adr/README.md && \
-grep -q '^title: "Architecture Decision Record Index"$' docs/adr/README.md && \
-grep -q '^# Architecture Decision Record Index$' docs/adr/README.md && \
-grep -q 'ADR-0001-product-delivery-surface.md' docs/adr/README.md && \
-grep -q 'ADR-TEMPLATE.md' docs/adr/README.md && \
+grep -q '^# ADR Index$' docs/adr/README.md && \
+grep -q 'ADR-0007' docs/adr/README.md && \
+grep -q 'ADR-0009' docs/adr/README.md && \
+grep -q 'ADR-0010' docs/adr/README.md && \
+grep -q 'ADR-0012' docs/adr/README.md && \
+grep -q 'ADR-0013' docs/adr/README.md && \
+grep -q 'ADR-0015' docs/adr/README.md && \
+grep -q 'docs/planning/02-adr-normalization-review.md' docs/adr/README.md && \
+grep -q 'must not be silently renamed' docs/adr/README.md && \
 git diff --check
 ```
 
-Expected result: the command exits successfully and `git diff --check` reports no whitespace errors.
+Expected result:
 
-## Recommended atomic commit
+```text
+All checks pass.
+```
 
-After verification passes:
+Manual verification:
+
+1. Confirm no individual ADR files were modified.
+2. Confirm `docs/adr/ADR-TEMPLATE.md` was not modified.
+3. Confirm ADR gaps are documented as known gaps, not errors.
+4. Confirm ADR-0013 and ADR-0015 overlap is documented as potential overlap, not resolved supersession.
+5. Confirm this index does not claim runtime implementation exists.
+
+---
+
+## 16. Recommended Atomic Commit
+
+```bash
+git add docs/adr/README.md docs/work-packets/WP-0012-adr-index-gap-and-status-annotation.md
+git commit -m "docs(adr): annotate adr index gaps and statuses"
+```
+
+If `WP-0012` was already committed separately, use:
 
 ```bash
 git add docs/adr/README.md
-git commit -m "docs(adr): add architecture decision record index"
+git commit -m "docs(adr): annotate adr index gaps and statuses"
 ```

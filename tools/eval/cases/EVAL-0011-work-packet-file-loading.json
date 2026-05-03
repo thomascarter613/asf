@@ -1,0 +1,20 @@
+{
+  "id": "EVAL-0011",
+  "title": "Work packet file loading exists",
+  "category": "runtime-package-file-loading",
+  "status": "active",
+  "required": true,
+  "purpose": "Verify that the work-packet core package includes dependency-free file loading and file validation.",
+  "checks": [
+    { "type": "file_exists", "path": "packages/work-packet-core/src/work-packet-file.ts" },
+    { "type": "file_exists", "path": "packages/work-packet-core/src/work-packet-file.test.ts" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/index.ts", "pattern": "loadWorkPacketFile" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/index.ts", "pattern": "validateWorkPacketFile" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/work-packet-file.ts", "pattern": "file-read-error" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/work-packet-file.ts", "pattern": "validateWorkPacketDocument" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/work-packet-file.test.ts", "pattern": "valid work-packet file passes" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/work-packet-file.test.ts", "pattern": "missing file returns file-read-error" },
+    { "type": "file_contains", "path": "packages/work-packet-core/src/work-packet-file.test.ts", "pattern": "file validation composes document validation" },
+    { "type": "command_succeeds", "command": "bun test packages/work-packet-core" }
+  ]
+}

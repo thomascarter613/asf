@@ -177,3 +177,16 @@ EVAL-0010 Work packet document validation exists.
 ```
 
 This case verifies document validator source, tests, public exports, validation composition, parser integration, metadata validation integration, Markdown validation integration, error behavior, warning preservation, and the local Bun test command.
+
+
+## Runtime File Loading Cases
+
+The harness includes runtime file-loading coverage for the work-packet core package.
+
+Current file-loading case:
+
+```text
+EVAL-0011 Work packet file loading exists.
+```
+
+This case verifies file-loading source, tests, public exports, file-read error behavior, document validator composition, valid file behavior, missing file behavior, and the local Bun test command.

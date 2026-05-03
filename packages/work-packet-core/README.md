@@ -20,9 +20,11 @@ isWorkPacketStatus
 validateWorkPacketMetadata
 validateWorkPacketMarkdown
 validateWorkPacketDocument
+loadWorkPacketFile
+validateWorkPacketFile
 ```
 
-Current Validation Scope
+## Current Validation Scope
 
 The package currently validates:
 
@@ -50,14 +52,14 @@ The package now explicitly tests:
 8. required Markdown section constants;
 9. the exported work-packet ID pattern.
 
-Test Command
+## Test Command
 
 Run from the repository root:
 ```bash
 bun test packages/work-packet-core
 ```
 
-Boundary
+## Boundary
 
 This package must remain dependency-free until a future work packet justifies dependencies.
 
@@ -92,3 +94,40 @@ warnings
 The validator does not read files from disk. It validates caller-provided Markdown strings only.
 
 The validator does not add dependencies, access the network, evaluate parsed values, or write files.
+
+## Work Packet File Loading and Validation
+
+The package includes dependency-free file loading for caller-provided work-packet Markdown file paths.
+
+Current file APIs:
+
+```text
+loadWorkPacketFile
+validateWorkPacketFile
+```
+
+The file validator composes:
+
+```text
+loadWorkPacketFile
+validateWorkPacketDocument
+```
+
+The file validator returns:
+
+```text
+valid
+path
+metadata
+body
+errors
+warnings
+```
+
+Missing or unreadable files return:
+
+```text
+file-read-error
+```
+
+The file-loading runtime slice does not walk directories, recursively scan repositories, read `.env` files by default, inspect secrets, access the network, execute file contents, or introduce CLI behavior.

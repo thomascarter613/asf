@@ -72,3 +72,8 @@ When parser behavior is added, evaluation cases must verify source files, public
 EVAL-0010 Work packet document validation exists.
 
 When document-level validation behavior is added, evaluation cases must verify source files, public exports, composed validation behavior, expected errors, warning preservation, and local tests.
+
+
+EVAL-0011 Work packet file loading exists.
+
+When file-loading behavior is added, evaluation cases must verify source files, public exports, read-error behavior, composed validation behavior, and local tests.

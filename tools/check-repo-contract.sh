@@ -252,8 +252,15 @@ check_file "docs/planning/07-package-and-tooling-baseline.md"
 check_file "docs/planning/08-ci-baseline-planning.md"
 check_file "docs/planning/09-executable-evaluation-harness-planning.md"
 check_file "docs/planning/10-evaluation-harness-ci-integration-planning.md"
+
+
 check_file "docs/planning/13-work-packet-core-hardening.md"
 check_file "docs/planning/14-work-packet-frontmatter-parser-runtime-slice-plan.md"
+
+
+check_file "docs/planning/17-work-packet-file-loading-runtime-slice-plan.md"
+check_file "docs/work-packets/WP-0042-work-packet-file-loading-runtime-slice-plan.md"
+check_file "docs/work-packets/WP-0043-work-packet-file-loading-runtime-baseline.md"
 
 print_header "Domain documents"
 
@@ -447,9 +454,11 @@ print_header "Evaluation harness CI integration anchors"
 check_contains "docs/planning/10-evaluation-harness-ci-integration-planning.md" 'bash tools/eval/run-evaluations.sh' "evaluation harness CI planning defines runner command"
 check_contains "docs/planning/10-evaluation-harness-ci-integration-planning.md" 'This document does not modify CI' "evaluation harness CI planning records planning-only boundary"
 check_contains "docs/planning/10-evaluation-harness-ci-integration-planning.md" 'Runtime implementation has not started' "evaluation harness CI planning preserves runtime boundary"
+check_contains "docs/planning/17-work-packet-file-loading-runtime-slice-plan.md" '^# Work Packet File Loading Runtime Slice Plan$' "file loading planning has expected heading"
 check_contains "docs/work-packets/WP-0030-evaluation-harness-ci-integration-planning.md" 'Evaluation Harness CI Integration Planning' "WP-0030 records evaluation harness CI integration planning"
 check_contains "docs/work-packets/WP-0031-evaluation-harness-ci-integration.md" 'Evaluation Harness CI Integration' "WP-0031 records evaluation harness CI integration"
-
+check_contains "docs/work-packets/WP-0042-work-packet-file-loading-runtime-slice-plan.md" 'Work Packet File Loading Runtime Slice Plan' "WP-0042 records file loading planning"
+check_contains "docs/work-packets/WP-0043-work-packet-file-loading-runtime-baseline.md" 'Work Packet File Loading Runtime Baseline' "WP-0043 records file loading implementation"
 
 check_contains "packages/work-packet-core/src/work-packet-validation.ts" 'WORK_PACKET_ID_PATTERN' "work packet ID pattern is exported"
 check_contains "packages/work-packet-core/src/work-packet-validation.ts" 'REQUIRED_WORK_PACKET_MARKDOWN_SECTIONS' "required Markdown sections are exported"
@@ -485,8 +494,10 @@ check_file "docs/work-packets/WP-0040-work-packet-file-validation-runtime-baseli
 
 check_file "packages/work-packet-core/src/work-packet-document.ts"
 check_file "packages/work-packet-core/src/work-packet-document.test.ts"
-
+check_file "packages/work-packet-core/src/work-packet-file.ts"
+check_file "packages/work-packet-core/src/work-packet-file.test.ts"
 check_file "tools/eval/cases/EVAL-0010-work-packet-document-validation.json"
+check_file "tools/eval/cases/EVAL-0011-work-packet-file-loading.json"
 
 check_contains "packages/work-packet-core/src/index.ts" 'validateWorkPacketDocument' "document validator is exported"
 check_contains "packages/work-packet-core/src/work-packet-document.ts" 'WorkPacketDocumentValidationResult' "document validation result type exists"
@@ -498,9 +509,23 @@ check_contains "packages/work-packet-core/src/work-packet-document.test.ts" 'mis
 check_contains "packages/work-packet-core/src/work-packet-document.test.ts" 'unclosed frontmatter fails' "document validator tests unclosed frontmatter"
 check_contains "packages/work-packet-core/src/work-packet-document.test.ts" 'missing Markdown section fails' "document validator tests missing Markdown section"
 check_contains "packages/work-packet-core/src/work-packet-document.test.ts" 'unknown frontmatter key warning is preserved' "document validator preserves parser warnings"
+check_contains "packages/work-packet-core/src/index.ts" 'loadWorkPacketFile' "work packet file loader is exported"
+check_contains "packages/work-packet-core/src/index.ts" 'validateWorkPacketFile' "work packet file validator is exported"
+check_contains "packages/work-packet-core/src/work-packet-file.ts" 'loadWorkPacketFile' "work packet file loader exists"
+check_contains "packages/work-packet-core/src/work-packet-file.ts" 'validateWorkPacketFile' "work packet file validator exists"
+check_contains "packages/work-packet-core/src/work-packet-file.ts" 'file-read-error' "work packet file validator reports read errors"
+check_contains "packages/work-packet-core/src/work-packet-file.ts" 'validateWorkPacketDocument' "work packet file validator composes document validator"
+check_contains "packages/work-packet-core/src/work-packet-file.test.ts" 'valid work-packet file passes' "work packet file tests valid files"
+check_contains "packages/work-packet-core/src/work-packet-file.test.ts" 'missing file returns file-read-error' "work packet file tests missing files"
+check_contains "packages/work-packet-core/src/work-packet-file.test.ts" 'file validation composes document validation' "work packet file tests document validation composition"
+
+
+
 check_contains "tools/eval/cases/EVAL-0010-work-packet-document-validation.json" 'validateWorkPacketDocument' "EVAL-0010 checks document validator export"
 check_contains "tools/eval/cases/EVAL-0010-work-packet-document-validation.json" 'bun test packages/work-packet-core' "EVAL-0010 checks package tests"
 
+check_contains "tools/eval/cases/EVAL-0011-work-packet-file-loading.json" 'bun test packages/work-packet-core' "EVAL-0011 checks package tests"
+check_contains "tools/eval/cases/EVAL-0011-work-packet-file-loading.json" 'validateWorkPacketFile' "EVAL-0011 checks file validator export"
 
 
 

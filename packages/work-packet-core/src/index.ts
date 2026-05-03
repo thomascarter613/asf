@@ -29,3 +29,13 @@ export {
 export type { WorkPacketDocumentValidationResult } from "./work-packet-document";
 
 export { validateWorkPacketDocument } from "./work-packet-document";
+
+export type {
+  WorkPacketFileLoadResult,
+  WorkPacketFileValidationResult,
+} from "./work-packet-file";
+
+export {
+  loadWorkPacketFile,
+  validateWorkPacketFile,
+} from "./work-packet-file";

@@ -9,12 +9,14 @@ The uploaded repository tree is the active baseline.
 Current phase:
 
 ```text
-Baseline Stabilization
+Baseline Stabilization / Implementation Readiness
 ````
 
 Runtime implementation has not started.
 
-This repository currently contains planning, architecture, ADR, domain, verification, work-packet, and context-continuity artifacts. It does not yet contain runtime application code, executable repo contract scripts, CI workflows, package-manager setup, database schema, vector retrieval implementation, or evaluation harness implementation.
+This repository currently contains planning, architecture, ADR, domain, verification, work-packet, context-continuity, root orientation, local repo-contract, and minimal Bun package/tooling artifacts.
+
+It does not yet contain runtime application code, CI workflows, database schema, vector retrieval implementation, Qdrant collections, embedding pipelines, agent runtime code, or executable evaluation harness implementation.
 
 ---
 
@@ -22,7 +24,7 @@ This repository currently contains planning, architecture, ADR, domain, verifica
 
 The repository is currently being stabilized before runtime implementation begins.
 
-The current stabilization work has established:
+The current stabilization and implementation-readiness work has established:
 
 1. Root governance files.
 2. Product documents.
@@ -33,8 +35,14 @@ The current stabilization work has established:
 7. Planning baseline.
 8. Verification baseline.
 9. Repo contract baseline.
-10. Work-packet governance.
-11. Context-continuity artifacts.
+10. Executable local repo contract script.
+11. Evaluation harness baseline.
+12. Work-packet governance.
+13. Context-continuity artifacts.
+14. Root README.
+15. Package/tooling baseline.
+16. Bun package/tooling setup.
+17. Bun-aware repo contract checks.
 
 The repository should continue to evolve through explicit work packets.
 
@@ -67,17 +75,25 @@ These files define how non-trivial work should be scoped, verified, completed, a
 The most important current orientation documents are:
 
 ```text
+README.md
 docs/ai/00-current-state.md
 docs/ai/01-handoff-packet-template.md
 docs/ai/02-context-source-rules.md
 docs/planning/00-baseline-inventory.md
 docs/planning/01-planning-baseline.md
 docs/planning/02-adr-normalization-review.md
+docs/planning/03-architecture-overview-placement-review.md
+docs/planning/04-baseline-tree-artifact-policy.md
+docs/planning/05-persistence-adr-overlap-review.md
+docs/planning/06-implementation-readiness-plan.md
+docs/planning/07-package-and-tooling-baseline.md
 docs/domain/00-domain-model.md
 docs/verification/00-verification-baseline.md
 docs/verification/01-repo-contract-baseline.md
+docs/verification/02-evaluation-harness-baseline.md
 docs/work-packets/README.md
 docs/work-packets/WORK-PACKET-TEMPLATE.md
+tools/check-repo-contract.sh
 ```
 
 ---
@@ -163,15 +179,60 @@ Current ADR lineage includes decisions about:
 15. Directive compiler and work protocols.
 16. Repo contract testing.
 17. Evaluation harness.
+18. Bun, uv, and cargo package-manager direction.
 
 Known ADR caveats:
 
 ```text
 ADR-0007, ADR-0009, ADR-0010, and ADR-0012 are absent.
 ADR-0013 and ADR-0015 appear to overlap by topic.
+ADR-0019 is preserved as historical context and superseded by ADR-0023 for active package-manager direction.
 ```
 
 These caveats are accepted baseline facts. Do not renumber, delete, rename, fill, or supersede ADRs without an explicit work packet.
+
+---
+
+## Package and Tooling Status
+
+Bun is canonical for JavaScript/TypeScript package management and script execution.
+
+Current package/tooling files:
+
+```text
+package.json
+bun.lock
+```
+
+Forbidden package/tooling files:
+
+```text
+pnpm-workspace.yaml
+pnpm-lock.yaml
+```
+
+Canonical local verification command:
+
+```bash
+bun run verify
+```
+
+Direct repo contract command:
+
+```bash
+./tools/check-repo-contract.sh
+```
+
+Package-manager ADR status:
+
+```text
+ADR-0023 supersedes ADR-0019 for active package-manager direction.
+ADR-0019 remains preserved as historical context.
+```
+
+Future Python package/environment work should use `uv` unless a later ADR changes that direction.
+
+Future Rust package/build work should use `cargo` unless a later ADR changes that direction.
 
 ---
 
@@ -211,7 +272,7 @@ docs/work-packets/README.md
 docs/work-packets/WORK-PACKET-TEMPLATE.md
 ```
 
-Current baseline work packets:
+Current baseline and readiness work packets include:
 
 ```text
 docs/work-packets/WP-0001-work-packet-template.md
@@ -223,6 +284,21 @@ docs/work-packets/WP-0006-adr-index-normalization-review.md
 docs/work-packets/WP-0007-repo-contract-testing-baseline.md
 docs/work-packets/WP-0008-context-continuity-baseline.md
 docs/work-packets/WP-0009-root-readme-baseline.md
+docs/work-packets/WP-0010-architecture-overview-placement-review.md
+docs/work-packets/WP-0011-baseline-tree-artifact-policy.md
+docs/work-packets/WP-0012-adr-index-gap-and-status-annotation.md
+docs/work-packets/WP-0013-persistence-adr-overlap-review.md
+docs/work-packets/WP-0014-executable-repo-contract-script.md
+docs/work-packets/WP-0015-evaluation-harness-baseline.md
+docs/work-packets/WP-0016-repo-contract-script-baseline-update.md
+docs/work-packets/WP-0017-current-state-and-readme-status-update.md
+docs/work-packets/WP-0018-implementation-readiness-planning.md
+docs/work-packets/WP-0019-package-and-tooling-baseline.md
+docs/work-packets/WP-0020-repo-contract-script-readiness-update.md
+docs/work-packets/WP-0021-package-and-tooling-setup.md
+docs/work-packets/WP-0022-package-manager-adr-correction.md
+docs/work-packets/WP-0023-repo-contract-script-bun-tooling-update.md
+docs/work-packets/WP-0024-current-state-and-readme-bun-tooling-status-update.md
 ```
 
 Non-trivial work should proceed through a work packet.
@@ -243,9 +319,14 @@ Current planning documents:
 docs/planning/00-baseline-inventory.md
 docs/planning/01-planning-baseline.md
 docs/planning/02-adr-normalization-review.md
+docs/planning/03-architecture-overview-placement-review.md
+docs/planning/04-baseline-tree-artifact-policy.md
+docs/planning/05-persistence-adr-overlap-review.md
+docs/planning/06-implementation-readiness-plan.md
+docs/planning/07-package-and-tooling-baseline.md
 ```
 
-The planning baseline currently recommends continuing with baseline stabilization before runtime implementation.
+The planning baseline currently recommends continuing through implementation-readiness work before runtime implementation.
 
 ---
 
@@ -280,19 +361,41 @@ Current verification documents:
 ```text
 docs/verification/00-verification-baseline.md
 docs/verification/01-repo-contract-baseline.md
+docs/verification/02-evaluation-harness-baseline.md
 ```
+
+Current executable local verification script:
+
+```text
+tools/check-repo-contract.sh
+```
+
+The script is local, executable, read-only, and non-mutating. It checks required repository files, directories, ADRs, planning documents, verification documents, work packets, AI/context-continuity files, package/tooling files, forbidden pnpm artifacts, and key content anchors.
 
 Current verification status:
 
 ```text
 Documentation-level verification baseline exists.
 Documentation-level repo contract baseline exists.
-Executable repo contract checks do not exist yet.
+Executable local repo contract script exists.
+Bun-aware repo contract checks exist.
+Documentation-level evaluation harness baseline exists.
+Executable evaluation harness implementation does not exist yet.
 CI verification does not exist yet.
 Runtime tests do not exist yet because runtime implementation has not started.
 ```
 
-The current repo contract baseline is documentation-only.
+Run local verification with:
+
+```bash
+bun run verify
+```
+
+Run the repo contract directly with:
+
+```bash
+./tools/check-repo-contract.sh
+```
 
 ---
 
@@ -324,20 +427,47 @@ Vector retrieval has not been implemented yet.
 
 ---
 
+## Evaluation Harness
+
+The evaluation harness baseline lives at:
+
+```text
+docs/verification/02-evaluation-harness-baseline.md
+```
+
+This document defines how future evaluation should assess:
+
+1. Context continuity.
+2. Work-packet discipline.
+3. Repo-contract compliance.
+4. Verification truthfulness.
+5. ADR preservation.
+6. Baseline caveat preservation.
+7. Future retrieval quality.
+8. Future agent execution.
+9. Future runtime behavior.
+10. Security and exclusion compliance.
+
+The evaluation harness baseline is documentation-level only.
+
+Executable evaluation harness implementation does not exist yet.
+
+---
+
 ## Known Baseline Caveats
 
 The following caveats are known and intentional for the current baseline:
 
 ```text
-README.md was absent from the uploaded baseline and is added by WP-0009.
 ADR-0007, ADR-0009, ADR-0010, and ADR-0012 are absent.
 ADR-0013 and ADR-0015 appear to overlap by topic.
+ADR-0019 remains preserved as historical context and is superseded by ADR-0023 for active package-manager direction.
 docs/product/00-architecture-overview.md and docs/architecture/00-architecture-overview.md both exist.
 tree exists at the repository root as a captured baseline artifact.
-Executable repo contract checks do not exist yet.
 CI workflows do not exist yet.
-Package-manager files do not exist yet.
 Runtime implementation has not started.
+Executable evaluation harness implementation does not exist yet.
+Vector retrieval implementation does not exist yet.
 ```
 
 Do not silently fix these caveats.
@@ -355,34 +485,59 @@ Future work must follow these rules:
 3. Preserve existing ADR numbering and filenames.
 4. Do not fill ADR number gaps automatically.
 5. Do not delete or supersede duplicate-looking ADRs without review.
-6. Do not move architecture documents without a work packet.
-7. Do not remove the root `tree` file without a work packet.
-8. Do not claim verification passed unless it actually ran.
-9. Do not claim runtime implementation exists before it exists.
-10. Do not introduce secrets, credentials, tokens, private keys, or sensitive operational values.
+6. Do not delete ADR-0019.
+7. Do not move architecture documents without a work packet.
+8. Do not remove the root `tree` file without a work packet.
+9. Do not claim verification passed unless it actually ran.
+10. Do not claim runtime implementation exists before it exists.
+11. Do not claim executable evaluation harness implementation exists before it exists.
+12. Do not introduce `pnpm-workspace.yaml`.
+13. Do not introduce `pnpm-lock.yaml`.
+14. Do not introduce secrets, credentials, tokens, private keys, or sensitive operational values.
 
 ---
 
 ## Recommended Next Work
 
-After `WP-0009: Root README Baseline`, the recommended next work is:
+After `WP-0024: Current State and README Bun Tooling Status Update`, the recommended next work is:
 
 ```text
-WP-0010: Architecture Overview Placement Review
+WP-0025: CI Baseline Planning
 ```
 
 Rationale:
 
-1. Architecture overview content currently exists in both `docs/product/` and `docs/architecture/`.
-2. The repository should clarify whether both files are intentional, whether one is canonical, or whether one should later be superseded.
-3. This should be review-only first and should not silently move or delete either file.
+1. Baseline stabilization has produced core orientation, planning, ADR, verification, context, and repo-contract artifacts.
+2. Local Bun verification now exists.
+3. Package/tooling setup is established.
+4. The repo contract script is Bun-aware.
+5. README and current-state handoff surfaces are synchronized.
+6. Runtime implementation should still wait until CI and implementation-readiness sequencing are explicit.
 
 Recommended later work:
 
 ```text
-WP-0011: Baseline Tree Artifact Policy
-WP-0012: ADR Index Gap and Status Annotation
-WP-0013: Persistence ADR Overlap Review
-WP-0014: Executable Repo Contract Script
-WP-0015: Evaluation Harness Baseline
+WP-0026: CI Workflow Baseline
+WP-0027: Executable Evaluation Harness Planning
+WP-0028: Runtime Implementation Slice Plan
 ```
+
+---
+
+## Current Minimal Verification
+
+Run:
+
+```bash
+bun run verify
+./tools/check-repo-contract.sh
+git diff --check
+```
+
+Expected result:
+
+```text
+Repo contract checks pass.
+```
+
+Do not claim this result unless the commands actually ran locally.

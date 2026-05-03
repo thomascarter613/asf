@@ -165,6 +165,8 @@ check_file "docs/planning/02-adr-normalization-review.md"
 check_file "docs/planning/03-architecture-overview-placement-review.md"
 check_file "docs/planning/04-baseline-tree-artifact-policy.md"
 check_file "docs/planning/05-persistence-adr-overlap-review.md"
+check_file "docs/planning/06-implementation-readiness-plan.md"
+check_file "docs/planning/07-package-and-tooling-baseline.md"
 
 print_header "Domain documents"
 
@@ -205,6 +207,10 @@ check_file "docs/work-packets/WP-0013-persistence-adr-overlap-review.md"
 check_file "docs/work-packets/WP-0014-executable-repo-contract-script.md"
 check_file "docs/work-packets/WP-0015-evaluation-harness-baseline.md"
 check_file "docs/work-packets/WP-0016-repo-contract-script-baseline-update.md"
+check_file "docs/work-packets/WP-0017-current-state-and-readme-status-update.md"
+check_file "docs/work-packets/WP-0018-implementation-readiness-planning.md"
+check_file "docs/work-packets/WP-0019-package-and-tooling-baseline.md"
+check_file "docs/work-packets/WP-0020-repo-contract-script-readiness-update.md"
 
 print_header "Script self-check"
 
@@ -221,6 +227,8 @@ check_contains "docs/planning/02-adr-normalization-review.md" '^# ADR Normalizat
 check_contains "docs/planning/03-architecture-overview-placement-review.md" '^# Architecture Overview Placement Review$' "architecture placement review has expected heading"
 check_contains "docs/planning/04-baseline-tree-artifact-policy.md" '^# Baseline Tree Artifact Policy$' "baseline tree artifact policy has expected heading"
 check_contains "docs/planning/05-persistence-adr-overlap-review.md" '^# Persistence ADR Overlap Review$' "persistence ADR overlap review has expected heading"
+check_contains "docs/planning/06-implementation-readiness-plan.md" '^# Implementation Readiness Plan$' "implementation readiness plan has expected heading"
+check_contains "docs/planning/07-package-and-tooling-baseline.md" '^# Package and Tooling Baseline$' "package and tooling baseline has expected heading"
 check_contains "docs/domain/00-domain-model.md" '^# Domain Model$' "domain model has expected heading"
 check_contains "docs/verification/00-verification-baseline.md" '^# Verification Baseline$' "verification baseline has expected heading"
 check_contains "docs/verification/01-repo-contract-baseline.md" '^# Repo Contract Baseline$' "repo contract baseline has expected heading"
@@ -236,6 +244,8 @@ print_header "Baseline phrase anchors"
 check_contains "README.md" 'The uploaded repository tree is the active baseline' "README records active baseline"
 check_contains "README.md" 'Runtime implementation has not started' "README records runtime implementation status"
 check_contains "docs/ai/00-current-state.md" 'The uploaded repository tree is the active baseline' "current state records active baseline"
+check_contains "docs/ai/00-current-state.md" 'tools/check-repo-contract.sh' "current state records repo contract script"
+check_contains "docs/ai/00-current-state.md" 'docs/verification/02-evaluation-harness-baseline.md' "current state records evaluation harness baseline"
 check_contains "docs/ai/02-context-source-rules.md" 'Vector retrieval augments repository memory' "context source rules preserve vector retrieval boundary"
 check_contains "docs/adr/README.md" 'ADR-0007' "ADR index records ADR-0007 gap"
 check_contains "docs/adr/README.md" 'ADR-0009' "ADR index records ADR-0009 gap"
@@ -255,6 +265,21 @@ check_contains "docs/verification/02-evaluation-harness-baseline.md" 'Evaluation
 check_contains "docs/verification/02-evaluation-harness-baseline.md" 'Expected Outcome' "evaluation harness baseline defines expected outcome"
 check_contains "docs/verification/02-evaluation-harness-baseline.md" 'Observed Outcome' "evaluation harness baseline defines observed outcome"
 check_contains "docs/verification/02-evaluation-harness-baseline.md" 'Regression Handling' "evaluation harness baseline defines regression handling"
+
+print_header "Implementation readiness anchors"
+
+check_contains "docs/planning/06-implementation-readiness-plan.md" 'Readiness Gates' "implementation readiness plan defines readiness gates"
+check_contains "docs/planning/06-implementation-readiness-plan.md" 'What Is Ready Now' "implementation readiness plan defines ready state"
+check_contains "docs/planning/06-implementation-readiness-plan.md" 'What Is Not Ready Yet' "implementation readiness plan defines not-ready state"
+check_contains "docs/planning/06-implementation-readiness-plan.md" 'Prohibited Premature Work' "implementation readiness plan defines prohibited premature work"
+
+print_header "Package and tooling anchors"
+
+check_contains "docs/planning/07-package-and-tooling-baseline.md" 'Package-Manager Strategy' "package and tooling baseline defines package-manager strategy"
+check_contains "docs/planning/07-package-and-tooling-baseline.md" 'Lockfile Expectations' "package and tooling baseline defines lockfile expectations"
+check_contains "docs/planning/07-package-and-tooling-baseline.md" 'Local Command Categories' "package and tooling baseline defines local command categories"
+check_contains "docs/planning/07-package-and-tooling-baseline.md" 'Repo Contract Integration' "package and tooling baseline defines repo contract integration"
+check_contains "docs/planning/07-package-and-tooling-baseline.md" 'Prohibited Premature Work' "package and tooling baseline defines prohibited premature work"
 
 print_header "Whitespace safety"
 

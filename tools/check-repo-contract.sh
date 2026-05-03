@@ -174,6 +174,7 @@ print_header "Verification documents"
 
 check_file "docs/verification/00-verification-baseline.md"
 check_file "docs/verification/01-repo-contract-baseline.md"
+check_file "docs/verification/02-evaluation-harness-baseline.md"
 
 print_header "AI and context-continuity documents"
 
@@ -202,6 +203,8 @@ check_file "docs/work-packets/WP-0011-baseline-tree-artifact-policy.md"
 check_file "docs/work-packets/WP-0012-adr-index-gap-and-status-annotation.md"
 check_file "docs/work-packets/WP-0013-persistence-adr-overlap-review.md"
 check_file "docs/work-packets/WP-0014-executable-repo-contract-script.md"
+check_file "docs/work-packets/WP-0015-evaluation-harness-baseline.md"
+check_file "docs/work-packets/WP-0016-repo-contract-script-baseline-update.md"
 
 print_header "Script self-check"
 
@@ -221,6 +224,7 @@ check_contains "docs/planning/05-persistence-adr-overlap-review.md" '^# Persiste
 check_contains "docs/domain/00-domain-model.md" '^# Domain Model$' "domain model has expected heading"
 check_contains "docs/verification/00-verification-baseline.md" '^# Verification Baseline$' "verification baseline has expected heading"
 check_contains "docs/verification/01-repo-contract-baseline.md" '^# Repo Contract Baseline$' "repo contract baseline has expected heading"
+check_contains "docs/verification/02-evaluation-harness-baseline.md" '^# Evaluation Harness Baseline$' "evaluation harness baseline has expected heading"
 check_contains "docs/ai/00-current-state.md" '^# Current State$' "current state has expected heading"
 check_contains "docs/ai/01-handoff-packet-template.md" '^# Handoff Packet Template$' "handoff packet template has expected heading"
 check_contains "docs/ai/02-context-source-rules.md" '^# Context Source Rules$' "context source rules has expected heading"
@@ -243,6 +247,14 @@ check_contains "docs/verification/01-repo-contract-baseline.md" 'Known Allowed E
 check_contains "docs/planning/03-architecture-overview-placement-review.md" 'Prohibited Automatic Actions' "architecture placement review records prohibited automatic actions"
 check_contains "docs/planning/04-baseline-tree-artifact-policy.md" 'Prohibited Automatic Actions' "baseline tree policy records prohibited automatic actions"
 check_contains "docs/planning/05-persistence-adr-overlap-review.md" 'Prohibited Automatic Actions' "persistence ADR overlap review records prohibited automatic actions"
+
+print_header "Evaluation harness anchors"
+
+check_contains "docs/verification/02-evaluation-harness-baseline.md" 'Evaluation Categories' "evaluation harness baseline defines categories"
+check_contains "docs/verification/02-evaluation-harness-baseline.md" 'Evaluation Case Structure' "evaluation harness baseline defines case structure"
+check_contains "docs/verification/02-evaluation-harness-baseline.md" 'Expected Outcome' "evaluation harness baseline defines expected outcome"
+check_contains "docs/verification/02-evaluation-harness-baseline.md" 'Observed Outcome' "evaluation harness baseline defines observed outcome"
+check_contains "docs/verification/02-evaluation-harness-baseline.md" 'Regression Handling' "evaluation harness baseline defines regression handling"
 
 print_header "Whitespace safety"
 

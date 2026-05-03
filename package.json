@@ -1,0 +1,11 @@
+{
+  "name": "agentic-software-framework",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Repository-governed framework for disciplined AI-assisted software development.",
+  "license": "UNLICENSED",
+  "scripts": {
+    "verify": "bun run verify:repo",
+    "verify:repo": "bash tools/check-repo-contract.sh"
+  }
+}

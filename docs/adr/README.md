@@ -309,6 +309,12 @@ Theme:
 Repo contract testing and evaluation harness design.
 ```
 
+## 8.6 Package Manager ADR Supersession
+
+ADR-0019 is preserved as historical context and is superseded by ADR-0023 for active package-manager direction.
+
+ADR-0023 is the current package-manager decision for Bun, uv, and cargo.
+
 ---
 
 ## 9. Prohibited ADR Index Interpretations

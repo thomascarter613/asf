@@ -78,8 +78,12 @@ function setMetadataValue(
       metadata.id = value;
       break;
     case "work_packet_id":
-      metadata.id = value;
       metadata.workPacketId = value;
+
+      if (metadata.id === undefined || metadata.id.trim().length === 0) {
+        metadata.id = value;
+      }
+
       break;
     case "title":
       metadata.title = value;

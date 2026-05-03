@@ -52,6 +52,10 @@ The correction must be recorded explicitly rather than silently editing history,
 
 ## Decision
 
+Bun is the canonical JavaScript/TypeScript package manager and script runner for this repository.
+
+Supersedes: ADR-0019
+
 The Agentic Software Framework adopts the following package-manager and toolchain direction:
 
 1. Bun is the canonical package manager and script runner for JavaScript and TypeScript work.
